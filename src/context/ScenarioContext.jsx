@@ -9,22 +9,36 @@ export const ScenarioProvider = ({ children }) => {
 
   // Initiales Laden der scenarios.json
   useEffect(() => {
-    // Erstellt den korrekten Pfad, egal ob lokal oder auf GitHub
-    const baseUrl = import.meta.env.BASE_URL;
-    const dataPath = `${baseUrl}data/scenarios.json`;
+    const baseUrl = import.meta.env.BASE_URL || "/";
+    const dataPath = `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}data/scenarios.json`;
+
+    console.log("Fetch-Versuch von:", dataPath);
 
     fetch(dataPath)
       .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Server-Fehler: ${response.status}`);
         return response.json();
       })
       .then((data) => {
-        setScenarios(data);
-        if (data.length > 0) setActiveScenario(data[0]);
+        console.log("Daten empfangen:", data);
+
+        // WICHTIG: Wir greifen auf den Schlüssel "scenarios" im Objekt zu
+        const scenarioArray = data.scenarios;
+
+        if (Array.isArray(scenarioArray) && scenarioArray.length > 0) {
+          setScenarios(scenarioArray);
+          setActiveScenario(scenarioArray[0]);
+          setLoading(false); // Das beendet den "Lade Simulation..." Screen
+        } else {
+          console.error("Strukturfehler: 'scenarios' Feld nicht gefunden oder leer", data);
+        }
       })
-      .catch((error) => console.error("Fehler beim Laden der Szenarien:", error));
+      .catch((error) => {
+        console.error("Ladefehler:", error);
+        // Damit die App nicht ewig hängen bleibt, beenden wir das Laden 
+        // auch bei einem Fehler und zeigen eine Meldung
+        setLoading(false);
+      });
   }, []);
 
   // Global Reset Funktion: Wird beim Szenarien-Wechsel aufgerufen
@@ -39,7 +53,13 @@ export const ScenarioProvider = ({ children }) => {
   };
 
   return (
-    <ScenarioContext.Provider value={{ scenarios, activeScenario, handleScenarioChange, loading }}>
+    <ScenarioContext.Provider value={{
+      scenarios,
+      activeScenario,
+      setActiveScenario, // <- Das hier MUSS rein, damit Header.jsx darauf zugreifen kann
+      handleScenarioChange,
+      loading
+    }}>
       {children}
     </ScenarioContext.Provider>
   );
