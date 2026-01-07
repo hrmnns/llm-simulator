@@ -1,43 +1,48 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useScenarios } from '../../context/ScenarioContext';
 
-const Phase1_Embedding = ({ simulator }) => {
+const Phase1_Embedding = ({ simulator, theme }) => {
   const { activeScenario } = useScenarios();
   const { noise, setNoise, positionWeight, setPositionWeight, processedVectors } = simulator;
 
+  // Interaktions-States
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [hoveredIndex, setHoveredIndex] = useState(null);
   const containerRef = useRef(null);
 
   const getTokenData = (index) => {
     return activeScenario?.phase_0_tokenization?.tokens.find(t => t.id === index + 1) || { text: '?', explanation: '' };
   };
 
+  // --- AUTO-FIT LOGIK ---
   const handleAutoFit = useCallback(() => {
-    if (!processedVectors || processedVectors.length === 0 || !containerRef.current) return;
-    const margin = 80; 
+    if (!processedVectors?.length || !containerRef.current) return;
+    const margin = 120;
     const coordsX = processedVectors.map(v => v.displayX);
     const coordsY = processedVectors.map(v => v.displayY);
     const minX = Math.min(...coordsX) - margin;
     const maxX = Math.max(...coordsX) + margin;
     const minY = Math.min(...coordsY) - margin;
     const maxY = Math.max(...coordsY) + margin;
-    const contentWidth = maxX - minX;
-    const contentHeight = maxY - minY;
+    
     const containerWidth = containerRef.current.clientWidth;
     const containerHeight = containerRef.current.clientHeight;
-    const newScale = Math.min(containerWidth / contentWidth, containerHeight / contentHeight, 1.5);
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-
-    setTransform({ x: -centerX * newScale, y: -centerY * newScale, scale: newScale });
+    const newScale = Math.min(containerWidth / (maxX - minX), containerHeight / (maxY - minY), 1.1);
+    
+    setTransform({ 
+      x: -((minX + maxX) / 2) * newScale, 
+      y: -((minY + maxY) / 2) * newScale, 
+      scale: newScale 
+    });
   }, [processedVectors]);
 
   useEffect(() => { handleAutoFit(); }, [activeScenario?.id]);
 
+  // --- MAUS INTERAKTION ---
   const handleMouseDown = (e) => {
-    if (e.target.closest('.token-point')) return; // Tooltips klickbar lassen
+    if (e.target.closest('.token-point')) return;
     setIsDragging(true);
     setDragStart({ x: e.clientX - transform.x, y: e.clientY - transform.y });
   };
@@ -54,101 +59,126 @@ const Phase1_Embedding = ({ simulator }) => {
     const scaleAmount = -e.deltaY * 0.001;
     setTransform(prev => ({
       ...prev,
-      scale: Math.max(0.1, Math.min(prev.scale + scaleAmount, 5))
+      scale: Math.max(0.2, Math.min(prev.scale + scaleAmount, 5))
     }));
   };
 
   return (
-    <div className="flex flex-col h-full p-6 text-white font-mono select-none">
+    <div className="flex flex-col h-full p-6 font-mono select-none">
       <div className="mb-4 flex justify-between items-end">
         <div>
-          <h2 className="text-xl font-bold text-blue-400">Phase 1: High-Dimensional Embedding</h2>
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest">Interaktiver Vektorraum-Explorer</p>
+          <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>Phase 1: Semantischer Vektorraum</h2>
+          <p className="text-[10px] text-slate-500 uppercase tracking-widest">Navigation: Mausrad (Zoom) | Ziehen (Pan)</p>
         </div>
         <div className="flex gap-2">
-           <button onClick={handleAutoFit} className="px-3 py-1 bg-blue-600/20 border border-blue-500/50 rounded hover:bg-blue-600/40 text-[10px] uppercase font-bold text-blue-400">Auto-Fit</button>
-           <button onClick={() => setTransform(p => ({...p, scale: p.scale * 1.2}))} className="w-8 h-7 bg-slate-800 border border-slate-700 rounded hover:bg-slate-700 text-xs">+</button>
-           <button onClick={() => setTransform(p => ({...p, scale: p.scale / 1.2}))} className="w-8 h-7 bg-slate-800 border border-slate-700 rounded hover:bg-slate-700 text-xs">-</button>
+           <button onClick={handleAutoFit} className="px-3 py-1 bg-blue-600/20 border border-blue-500/50 rounded text-[10px] text-blue-400 font-bold uppercase hover:bg-blue-600/40 transition-colors">Zentrieren</button>
         </div>
       </div>
 
       <div 
-        ref={containerRef}
-        className={`flex-1 relative bg-slate-950/50 border border-slate-800 rounded-xl overflow-hidden cursor-${isDragging ? 'grabbing' : 'grab'}`}
+        ref={containerRef} 
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
+        className={`flex-1 relative rounded-xl overflow-hidden border transition-colors cursor-${isDragging ? 'grabbing' : 'grab'} ${
+          theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
+        }`}
       >
-        {/* Achsenbeschriftung (FIXIERT am Rand) */}
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[9px] text-slate-600 uppercase tracking-widest z-10 pointer-events-none">Syntaktische Rolle</div>
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-slate-600 uppercase tracking-widest rotate-90 z-10 pointer-events-none">Semantische Nähe</div>
+        {/* FESTE HINTERGRUND-QUADRANTEN (skalieren nicht mit) */}
+        <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 opacity-10 pointer-events-none text-[8px] font-black uppercase tracking-[0.3em]">
+          <div className="border-r border-b border-slate-700/40 flex items-start justify-start p-4 text-blue-500">Logisch / Wissenschaftlich</div>
+          <div className="border-b border-slate-700/40 flex items-start justify-end p-4 text-purple-500">Funktional / Sozial</div>
+          <div className="border-r border-slate-700/40 flex items-end justify-start p-4 text-green-500">Evolutionär / Ancestral</div>
+          <div className="flex items-end justify-end p-4 text-pink-500">Poetisch / Emotional</div>
+        </div>
 
-        {/* Transform-Layer */}
+        {/* INTERAKTIVER TRANSFORM-LAYER */}
         <div 
-          className="absolute inset-0 transition-transform duration-500 ease-out"
+          className="absolute inset-0 transition-transform duration-75 ease-out" 
           style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`, transformOrigin: 'center' }}
         >
-          {/* Koordinaten-Gitter (pointer-events-none ist entscheidend!) */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+          {/* Gitterkreuz im Hintergrund */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
             <div className="w-[10000px] h-px bg-blue-500"></div>
             <div className="h-[10000px] w-px bg-blue-500"></div>
           </div>
 
+          {/* BEZIEHUNGS-LINIEN (SVG) */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ overflow: 'visible' }}>
+            {hoveredIndex !== null && processedVectors.map((target, idx) => {
+              if (idx === hoveredIndex) return null;
+              const source = processedVectors[hoveredIndex];
+              const dist = Math.sqrt(Math.pow(source.displayX - target.displayX, 2) + Math.pow(source.displayY - target.displayY, 2));
+              if (dist > 400) return null;
+              return (
+                <line 
+                  key={idx}
+                  x1={`calc(50% + ${source.displayX}px)`} y1={`calc(50% + ${source.displayY}px)`}
+                  x2={`calc(50% + ${target.displayX}px)`} y2={`calc(50% + ${target.displayY}px)`}
+                  stroke={theme === 'dark' ? '#3b82f6' : '#2563eb'}
+                  strokeWidth={Math.max(0.5, (400 - dist) / 100)}
+                  opacity={(400 - dist) / 600}
+                />
+              );
+            })}
+          </svg>
+
+          {/* TOKEN-PUNKTE */}
           {processedVectors.map((vec, i) => {
             const token = getTokenData(vec.token_index);
             return (
-              <div
-                key={i}
-                className="absolute token-point group z-20"
-                style={{ 
-                  left: `calc(50% + ${vec.displayX}px)`, 
-                  top: `calc(50% + ${vec.displayY}px)`, 
-                  transform: 'translate(-50%, -50%)' 
-                }}
+              <div 
+                key={i} 
+                className="absolute token-point group z-20" 
+                style={{ left: `calc(50% + ${vec.displayX}px)`, top: `calc(50% + ${vec.displayY}px)`, transform: 'translate(-50%, -50%)' }}
+                onMouseEnter={() => setHoveredIndex(i)}
+                onMouseLeave={() => setHoveredIndex(null)}
               >
-                {/* Der Punkt */}
-                <div className="w-3.5 h-3.5 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.8)] group-hover:scale-150 transition-all cursor-help border border-white/20" />
+                {/* Punkt-Visualisierung */}
+                <div className={`w-3.5 h-3.5 rounded-full transition-all duration-300 border-2 ${
+                  hoveredIndex === i 
+                  ? 'scale-150 bg-white border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.6)]' 
+                  : 'bg-blue-600 border-transparent'
+                }`} />
                 
-                {/* Token-Text */}
+                {/* Label (skaliert gegengleich, um lesbar zu bleiben) */}
                 <div 
-                  className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900/90 px-2 py-0.5 rounded text-[11px] text-blue-300 font-bold border border-slate-700 whitespace-nowrap shadow-xl"
+                  className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900/90 px-2 py-0.5 rounded text-[11px] text-blue-300 font-bold border border-slate-700 whitespace-nowrap shadow-xl pointer-events-none"
                   style={{ transform: `translateX(-50%) scale(${1 / transform.scale})` }}
                 >
                   {token.text}
                 </div>
 
-                {/* Didaktischer Tooltip (erscheint bei Hover) */}
+                {/* Didaktischer Tooltip */}
                 <div 
-                  className="absolute z-50 bottom-10 left-1/2 -translate-x-1/2 w-56 p-3 bg-slate-900 border border-blue-500 rounded-lg shadow-[0_0_30px_rgba(0,0,0,0.5)] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200"
+                  className="absolute z-50 bottom-10 left-1/2 -translate-x-1/2 w-56 p-3 bg-slate-900 border border-blue-500 rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
                   style={{ transform: `translateX(-50%) scale(${1 / transform.scale})`, transformOrigin: 'bottom' }}
                 >
-                  <p className="text-blue-400 text-[10px] font-bold uppercase mb-1 border-b border-blue-900/50 pb-1 italic">Vektor-Analyse</p>
-                  <p className="text-slate-200 text-[11px] leading-snug mb-2">{token.explanation}</p>
-                  <div className="flex justify-between text-[8px] text-slate-500 font-bold">
-                    <span>X: {vec.displayX.toFixed(1)}</span>
-                    <span>Y: {vec.displayY.toFixed(1)}</span>
-                  </div>
+                  <p className="text-blue-400 text-[10px] font-black uppercase mb-1 border-b border-blue-900/50 pb-1 italic">Semantische Analyse</p>
+                  <p className="text-slate-200 text-[11px] leading-snug">{token.explanation}</p>
                 </div>
               </div>
             );
           })}
         </div>
-        
-        {/* Help Overlay */}
-        <div className="absolute bottom-2 left-4 text-[8px] text-slate-600 uppercase pointer-events-none">
-          Drag to Pan | Scroll to Zoom
-        </div>
       </div>
 
+      {/* CONTROLS */}
       <div className="mt-6 grid grid-cols-2 gap-4">
-        <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-lg">
-          <label className="text-[10px] uppercase text-blue-400 font-bold block mb-1">Semantic Noise: {noise.toFixed(2)}</label>
+        <div className={`p-3 rounded-lg border ${theme === 'dark' ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+          <div className="flex justify-between items-center mb-1">
+             <label className="text-[10px] uppercase font-black text-blue-500">Semantic Noise</label>
+             <span className="text-[10px] text-slate-500">{noise.toFixed(2)}</span>
+          </div>
           <input type="range" min="0" max="5" step="0.1" value={noise} onChange={(e) => setNoise(parseFloat(e.target.value))} className="w-full accent-blue-500" />
         </div>
-        <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-lg">
-          <label className="text-[10px] uppercase text-purple-400 font-bold block mb-1">Positional Weight: {(positionWeight * 100).toFixed(0)}%</label>
+        <div className={`p-3 rounded-lg border ${theme === 'dark' ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+          <div className="flex justify-between items-center mb-1">
+            <label className="text-[10px] uppercase font-black text-purple-500">Position Weight</label>
+            <span className="text-[10px] text-slate-500">{(positionWeight * 100).toFixed(0)}%</span>
+          </div>
           <input type="range" min="0" max="1" step="0.01" value={positionWeight} onChange={(e) => setPositionWeight(parseFloat(e.target.value))} className="w-full accent-purple-500" />
         </div>
       </div>
