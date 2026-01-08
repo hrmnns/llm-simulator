@@ -10,12 +10,39 @@ const Phase1_Embedding = ({ simulator, theme, setHoveredItem }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [hoveredIndex, setHoveredIndex] = useState(null);
-  const [activeTooltip, setActiveTooltip] = useState(null); // NEU: Für Klick-Erklärung
+  const [activeTooltip, setActiveTooltip] = useState(null);
+  const [selectedTokenId, setSelectedTokenId] = useState(null); // NEU: Fixiert die Markierung
   const containerRef = useRef(null);
 
   const getTokenData = (index) => {
     return activeScenario?.phase_0_tokenization?.tokens.find(t => t.id === index + 1) || { text: '?', explanation: '' };
   };
+
+  // Hilfsfunktion
+  const updateInspector = useCallback((id) => {
+    if (!id) {
+      setHoveredItem(null);
+      return;
+    }
+    const vec = processedVectors.find(v => v.token_index === id - 1);
+    const token = getTokenData(id - 1);
+
+    if (vec && token) {
+      const stabilityValue = Math.max(5, 100 - (noise * 16));
+      const stabilityColor = stabilityValue > 70 ? "Stabil" : stabilityValue > 40 ? "Rauschen" : "Instabil";
+
+      setHoveredItem({
+        title: `Vektor-Analyse: ${token.text}`,
+        data: {
+          "ID": id,
+          "X-Koord": vec.displayX.toFixed(2),
+          "Y-Koord": vec.displayY.toFixed(2),
+          "Status": stabilityColor,
+          "Stabilität": stabilityValue.toFixed(0) + "%"
+        }
+      });
+    }
+  }, [processedVectors, noise, setHoveredItem]);
 
   // --- AUTO-FIT LOGIK ---
   const handleAutoFit = useCallback(() => {
@@ -93,11 +120,20 @@ const Phase1_Embedding = ({ simulator, theme, setHoveredItem }) => {
 
         <div className="absolute inset-0 transition-transform duration-75 ease-out" style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`, transformOrigin: 'center' }}>
           {/* BEZIEHUNGS-LINIEN (SVG) */}
+          {/* BEZIEHUNGS-LINIEN (SVG) */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ overflow: 'visible' }} viewBox={`${-containerRef.current?.clientWidth / 2 || -500} ${-containerRef.current?.clientHeight / 2 || -500} ${containerRef.current?.clientWidth || 1000} ${containerRef.current?.clientHeight || 1000}`}>
-            {hoveredIndex !== null && processedVectors.map((target, idx) => {
-              if (idx === hoveredIndex) return null;
-              const source = processedVectors[hoveredIndex];
+            {(hoveredIndex !== null || selectedTokenId !== null) && processedVectors.map((target, idx) => {
+
+              // Quelle ist entweder der Hover oder das fest selektierte Token
+              const sourceIdx = hoveredIndex !== null
+                ? hoveredIndex
+                : processedVectors.findIndex(v => v.token_index === selectedTokenId - 1);
+
+              if (idx === sourceIdx || sourceIdx === -1) return null;
+
+              const source = processedVectors[sourceIdx];
               const dist = Math.sqrt(Math.pow(source.displayX - target.displayX, 2) + Math.pow(source.displayY - target.displayY, 2));
+
               if (dist > 400) return null;
 
               return (
@@ -106,9 +142,7 @@ const Phase1_Embedding = ({ simulator, theme, setHoveredItem }) => {
                   x1={source.displayX} y1={source.displayY}
                   x2={target.displayX} y2={target.displayY}
                   stroke={theme === 'dark' ? '#3b82f6' : '#2563eb'}
-                  // NEU: Linienstärke nimmt ab, wenn Noise zunimmt
                   strokeWidth={Math.max(0.5, (400 - dist) / 100) * (1 - noise / 8)}
-                  // NEU: Linie wird gestrichelt, wenn Noise über 2.0 liegt (Signal für Instabilität)
                   strokeDasharray={noise > 2.0 ? "4 2" : "0"}
                   opacity={(400 - dist) / 600}
                 />
@@ -118,7 +152,8 @@ const Phase1_Embedding = ({ simulator, theme, setHoveredItem }) => {
 
           {processedVectors.map((vec, i) => {
             const token = getTokenData(vec.token_index);
-            if (!token) return null; // Falls der Index nicht existiert
+            if (!token) return null;
+
             return (
               <div
                 key={i}
@@ -126,41 +161,28 @@ const Phase1_Embedding = ({ simulator, theme, setHoveredItem }) => {
                 style={{ left: `calc(50% + ${vec.displayX}px)`, top: `calc(50% + ${vec.displayY}px)`, transform: 'translate(-50%, -50%)' }}
                 onMouseEnter={() => {
                   setHoveredIndex(i);
-
-                  // Berechnung der Stabilität basierend auf dem aktuellen globalen Noise
-                  // (0 noise = 100%, 5 noise = ca. 20%)
-                  const stabilityValue = Math.max(5, 100 - (noise * 16));
-                  const stabilityColor = stabilityValue > 70 ? "Stabil" : stabilityValue > 40 ? "Rauschen" : "Instabil";
-
-                  setHoveredItem({
-                    title: `Vektor-Analyse: ${token.text}`,
-                    data: {
-                      "ID": vec.token_index,
-                      "X-Koord": vec.displayX.toFixed(2),
-                      "Y-Koord": vec.displayY.toFixed(2),
-                      "Vektor-Status": stabilityColor,
-                      "Stabilität": stabilityValue.toFixed(0) + "%"
-                    }
-                  });
+                  updateInspector(token.id); // Zeige Hover-Daten
                 }}
                 onMouseLeave={() => {
                   setHoveredIndex(null);
-                  setHoveredItem(null);
+                  // WICHTIG: Fallback auf selektiertes Item oder null
+                  updateInspector(selectedTokenId);
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
+                  setSelectedTokenId(token.id);
                   setActiveTooltip({ token, x: vec.displayX, y: vec.displayY });
+                  updateInspector(token.id); // Fixiere Daten im Inspektor
                 }}
               >
-               
-<div className={`w-3.5 h-3.5 rounded-full transition-all duration-300 border-2 ${
-    hoveredIndex === i || activeTooltip?.token.id === token.id 
-      ? 'scale-150 bg-white border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.6)]' 
-      : 'bg-blue-600 border-transparent'
-    } ${noise > 3.0 ? 'animate-pulse opacity-70' : ''}`} 
-  />
+                <div className={`w-3.5 h-3.5 rounded-full transition-all duration-300 border-2 ${hoveredIndex === i || selectedTokenId === token.id
+                  ? 'scale-150 bg-white border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.6)]'
+                  : 'bg-blue-600 border-transparent'
+                  } ${noise > 3.0 ? 'animate-pulse opacity-70' : ''}`} />
 
-                <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900/90 px-2 py-0.5 rounded text-[11px] text-blue-300 font-bold border border-slate-700 whitespace-nowrap pointer-events-none" style={{ transform: `translateX(-50%) scale(${1 / transform.scale})` }}>{token.text}</div>
+                <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900/90 px-2 py-0.5 rounded text-[11px] text-blue-300 font-bold border border-slate-700 whitespace-nowrap pointer-events-none" style={{ transform: `translateX(-50%) scale(${1 / transform.scale})` }}>
+                  {token.text}
+                </div>
               </div>
             );
           })}
