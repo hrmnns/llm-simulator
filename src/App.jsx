@@ -23,6 +23,7 @@ function AppContent() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [theme, setTheme] = useState('dark');
   const [glossaryData, setGlossaryData] = useState(null);
+  const [hoveredItem, setHoveredItem] = useState(null); // Für den Detail-Inspektor
 
   const { scenarios, activeScenario, handleScenarioChange } = useScenarios();
   const simulator = useLLMSimulator(activeScenario);
@@ -72,22 +73,23 @@ function AppContent() {
               </div>
             ) : (
               <div key={activeScenario.id} className="h-full w-full">
-                {activePhase === 0 && <Phase0_Tokenization simulator={simulator} theme={theme} />}
-                {activePhase === 1 && <Phase1_Embedding simulator={simulator} theme={theme} />}
-                {activePhase === 2 && <Phase2_Attention simulator={simulator} theme={theme} />}
-                {activePhase === 3 && <Phase3_FFN simulator={simulator} theme={theme} />}
-                {activePhase === 4 && <Phase4_Decoding simulator={simulator} theme={theme} />}
-                {activePhase === 5 && <Phase5_Analysis simulator={simulator} theme={theme} />}
+                {activePhase === 0 && <Phase0_Tokenization simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
+                {activePhase === 1 && <Phase1_Embedding simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
+                {activePhase === 2 && <Phase2_Attention simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
+                {activePhase === 3 && <Phase3_FFN simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
+                {activePhase === 4 && <Phase4_Decoding simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
+                {activePhase === 5 && <Phase5_Analysis simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
               </div>
             )}
           </div>
 
-          {/* Rechtes Panel (Sidebar) */}
+          {/* Rechts: Sidebar */}
           <aside className={`transition-all duration-300 ${isSidebarExpanded ? 'flex-1 min-w-[320px]' : 'flex-none w-auto'}`}>
             <PhaseSidebar
               activePhase={activePhase}
               activeScenario={activeScenario}
-              simulator={simulator} // <-- Neu hinzugefügt
+              simulator={simulator}
+              hoveredItem={hoveredItem} // Neu: Daten an Sidebar übergeben
               theme={theme}
               isExpanded={isSidebarExpanded}
               setIsExpanded={setIsSidebarExpanded}
