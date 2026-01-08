@@ -1,17 +1,22 @@
 import React from 'react';
 
 const Footer = () => {
-  // Diese Variablen werden von Vite während des Build-Vorgangs ersetzt
-  const version = __APP_VERSION__;
-  const deployId = __DEPLOY_ID__;
+  // Fallback-Werte, falls die globalen Variablen (z.B. von Vite) nicht definiert sind
+  const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '20260108-STABLE';
+  const buildDate = typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : '08.01.2026';
 
   return (
-    <footer className="fixed bottom-0 left-0 w-full p-2 flex justify-between items-center pointer-events-none">
-      <div className="text-[8px] text-slate-700 font-mono uppercase tracking-widest opacity-50">
-        Status: Production Stable
+    <footer className="w-full p-4 flex flex-col md:flex-row justify-between items-center border-t border-slate-900/50 gap-4 font-mono">
+      <div className="text-[9px] text-slate-600 font-mono uppercase tracking-[0.3em] opacity-40">
+        CHERWARE.DE
       </div>
-      <div className="text-[8px] text-slate-700 font-mono opacity-50 bg-slate-950/80 px-2 py-0.5 rounded">
-        {version} • Build: {deployId}
+      <div className="flex gap-4 items-center">
+        <div className="text-[9px] text-slate-500 font-mono bg-slate-900/50 px-3 py-1 rounded border border-slate-800/50">
+          BUILD: <span className="text-blue-500 font-bold">{appVersion}</span>
+        </div>
+        <div className="text-[9px] text-slate-500 font-mono opacity-40">
+          {buildDate}
+        </div>
       </div>
     </footer>
   );
