@@ -43,26 +43,25 @@ export const ScenarioProvider = ({ children }) => {
 
   // Global Reset Funktion: Wird beim Szenarien-Wechsel aufgerufen
   const handleScenarioChange = (scenarioId) => {
-    const selected = scenarios.find(s => s.id === scenarioId);
-    setActiveScenario(selected);
+    // Wir wandeln beide Seiten in Strings um, um sicherzugehen
+    const handleScenarioChange = (scenarioId) => {
+      const selected = scenarios.find(s => String(s.id) === String(scenarioId));
+      if (selected) {
+        setActiveScenario(selected);
+      }
+    };
 
-    // Da die App beim Szenarienwechsel neu lädt, 
-    // werden die States im useLLMSimulator automatisch 
-    // auf ihre Default-Werte (noise=0, temp=1.0) zurückgesetzt.
-    // Falls du eine manuelle Reset-Funktion willst, könntest du diese hier triggern.
+    return (
+      <ScenarioContext.Provider value={{
+        scenarios,
+        activeScenario,
+        setActiveScenario, // <- Das hier MUSS rein, damit Header.jsx darauf zugreifen kann
+        handleScenarioChange,
+        loading
+      }}>
+        {children}
+      </ScenarioContext.Provider>
+    );
   };
 
-  return (
-    <ScenarioContext.Provider value={{
-      scenarios,
-      activeScenario,
-      setActiveScenario, // <- Das hier MUSS rein, damit Header.jsx darauf zugreifen kann
-      handleScenarioChange,
-      loading
-    }}>
-      {children}
-    </ScenarioContext.Provider>
-  );
-};
-
-export const useScenarios = () => useContext(ScenarioContext);
+  export const useScenarios = () => useContext(ScenarioContext);

@@ -1,37 +1,39 @@
 import React from 'react';
 
-const Header = ({ onOpenHelp, theme, toggleTheme }) => {
+const Header = ({ onOpenHelp, theme, toggleTheme, scenarios, activeScenario, onScenarioChange }) => {
   return (
-    <header className={`w-full py-4 px-8 flex justify-between items-center border-b backdrop-blur-md z-50 transition-colors ${
-      theme === 'dark' ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-white/50'
+    <header className={`w-full px-6 py-4 flex justify-between items-center border-b ${
+      theme === 'dark' ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-slate-200'
     }`}>
-      <div className="flex flex-col">
-        <h1 className="text-xl font-black tracking-tighter text-blue-500 uppercase">
-          LLM <span className={theme === 'dark' ? 'text-slate-100 italic' : 'text-slate-900 italic'}>Simulator</span>
+      <div className="flex items-center gap-8">
+        <h1 className="text-lg font-black uppercase tracking-tighter text-blue-500">
+          LLM Explorer <span className="font-light opacity-50">v2.3</span>
         </h1>
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-          <span className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">System Ready</span>
+
+        {/* SCENARIO SELECTOR */}
+        <div className="flex items-center gap-3 bg-slate-800/50 p-1 rounded-xl border border-slate-700">
+          <span className="text-[9px] font-black uppercase px-2 opacity-50">Szenario:</span>
+          <select 
+            value={activeScenario?.id} 
+            onChange={(e) => onScenarioChange(parseInt(e.target.value))}
+            className="bg-transparent text-xs font-bold outline-none cursor-pointer pr-4"
+          >
+            {scenarios.map(s => (
+              <option key={s.id} value={s.id} className="bg-slate-900">{s.name}</option>
+            ))}
+          </select>
         </div>
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Theme Toggle - Einfaches Text Icon */}
-        <button 
-          onClick={toggleTheme}
-          className="p-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-blue-500/50 transition-all text-slate-400"
-          title="Toggle Theme"
-        >
+        <button onClick={toggleTheme} className="p-2 opacity-50 hover:opacity-100 transition-all text-xl">
           {theme === 'dark' ? '☀️' : '🌙'}
         </button>
-
-        {/* Glossar Button - Einfaches Text Icon */}
         <button 
           onClick={onOpenHelp}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600/10 border border-blue-500/50 hover:bg-blue-600/20 transition-all group"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black rounded-lg uppercase transition-all shadow-lg shadow-blue-900/20"
         >
-          <span className="text-blue-400">📖</span>
-          <span className="text-xs font-bold uppercase tracking-tight text-blue-400">Glossar</span>
+          Glossar
         </button>
       </div>
     </header>

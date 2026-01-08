@@ -5,7 +5,7 @@ export const useLLMSimulator = (activeScenario) => {
   const [temperature, setTemperature] = useState(1.0);
   const [activeProfileId, setActiveProfileId] = useState('scientific');
   const [mlpThreshold, setMlpThreshold] = useState(0.5);
-  const [positionWeight, setPositionWeight] = useState(0); 
+  const [positionWeight, setPositionWeight] = useState(0);
 
   const processedVectors = useMemo(() => {
     if (!activeScenario?.phase_1_embedding) return [];
@@ -25,10 +25,24 @@ export const useLLMSimulator = (activeScenario) => {
   }, [activeScenario, noise, positionWeight]);
 
   const activeFFN = useMemo(() => {
-    if (!activeScenario?.phase_3_ffn) return [];
-    const profile = activeScenario.phase_3_ffn.activation_profiles.find(p => p.ref_profile_id === activeProfileId);
+    if (!activeScenario?.phase_3_ffn?.activation_profiles) return [];
+
+    // 1. Versuch: Finde das aktuell gewählte Profil (z.B. 'scientific')
+    let profile = activeScenario.phase_3_ffn.activation_profiles.find(
+      p => String(p.ref_profile_id).toLowerCase() === String(activeProfileId).toLowerCase()
+    );
+
+    // 2. Fallback: Wenn 'scientific' im neuen Szenario nicht existiert, nimm einfach das erste verfügbare
+    if (!profile && activeScenario.phase_3_ffn.activation_profiles.length > 0) {
+      profile = activeScenario.phase_3_ffn.activation_profiles[0];
+    }
+
     if (!profile) return [];
-    return profile.activations.map(a => ({ ...a, isActive: a.activation >= mlpThreshold }));
+
+    return profile.activations.map(a => ({
+      ...a,
+      isActive: a.activation >= mlpThreshold
+    }));
   }, [activeScenario, activeProfileId, mlpThreshold]);
 
   const finalOutputs = useMemo(() => {
@@ -45,13 +59,20 @@ export const useLLMSimulator = (activeScenario) => {
 
   // WICHTIG: Hier müssen alle Variablen rein!
   return {
-    noise, setNoise,
-    positionWeight, setPositionWeight, 
-    temperature, setTemperature,
-    activeProfileId, setActiveProfileId,
-    mlpThreshold, setMlpThreshold,
+    phase_0_tokenization: activeScenario?.phase_0_tokenization,
+
     processedVectors,
     activeFFN,
-    finalOutputs
+    finalOutputs,
+    noise,
+    setNoise,
+    temperature,
+    setTemperature,
+    activeProfileId,
+    setActiveProfileId,
+    mlpThreshold,
+    setMlpThreshold,
+    positionWeight,
+    setPositionWeight
   };
 };
