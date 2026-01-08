@@ -1,6 +1,6 @@
 {
   "project": "LLM-Explorer",
-  "version": "2.6",
+  "version": "2.9",
   "scenarios": [
     {
       "id": "was-ist-ein-hund",
@@ -31,16 +31,16 @@
             "id": "scientific",
             "label": "Wissenschaftlich",
             "rules": [
-              { "source": 4, "target": 1, "strength": 0.85, "explanation": "Sucht nach der definitorischen Essenz (Was)." },
-              { "source": 4, "target": 2, "strength": 0.70, "explanation": "Prüft die Seins-Beziehung (ist)." }
+              { "source": 4, "target": 1, "strength": 0.9, "explanation": "Sucht nach der Definition (Was)." },
+              { "source": 4, "target": 2, "strength": 0.75, "explanation": "Prüft die Seins-Beziehung (ist)." }
             ]
           },
           {
             "id": "emotional",
             "label": "Poetisch/Emotional",
             "rules": [
-              { "source": 4, "target": 3, "strength": 0.95, "explanation": "Fokussiert auf das Individuelle (ein)." },
-              { "source": 4, "target": 4, "strength": 0.60, "explanation": "Starke Eigen-Gewichtung des Begriffs." }
+              { "source": 4, "target": 3, "strength": 0.95, "explanation": "Fokus auf das Individuum (ein Hund)." },
+              { "source": 4, "target": 4, "strength": 0.6, "explanation": "Eigen-Gewichtung des Begriffs." }
             ]
           }
         ]
@@ -120,7 +120,7 @@
             "label": "Kriminell/Finanz",
             "rules": [
               { "source": 15, "target": 11, "strength": 0.95, "explanation": "Verbindet Ort (Bank) mit Täter (Bankräuber)." },
-              { "source": 15, "target": 12, "strength": 0.80, "explanation": "Zieht Kontext aus der Handlung 'Räuber'." }
+              { "source": 15, "target": 12, "strength": 0.85, "explanation": "Zieht Kontext aus der Handlung 'Räuber'." }
             ]
           },
           {
@@ -202,14 +202,14 @@
             "label": "Metaphorisch",
             "rules": [
               { "source": 31, "target": 33, "strength": 0.92, "explanation": "Koppelt Zeit an das Verb 'fliegen'." },
-              { "source": 31, "target": 37, "strength": 0.85, "explanation": "Verknüpft Zeitempfinden mit Spaß." }
+              { "source": 31, "target": 37, "strength": 0.88, "explanation": "Verknüpft Zeitempfinden mit Spaß." }
             ]
           },
           {
             "id": "chronological",
             "label": "Physikalisch",
             "rules": [
-              { "source": 31, "target": 31, "strength": 0.90, "explanation": "Fokus auf die Zeit als mathematische Konstante." }
+              { "source": 31, "target": 30, "strength": 0.9, "explanation": "Fokus auf die Zeit als mathematische Konstante." }
             ]
           }
         ]
@@ -279,15 +279,15 @@
             "label": "Fakten-Check",
             "rules": [
               { "source": 42, "target": 42, "strength": 0.98, "explanation": "Sichert den Kern des historischen Fakts." },
-              { "source": 42, "target": 40, "strength": 0.70, "explanation": "Prüft die historische Fragestellung." }
+              { "source": 42, "target": 40, "strength": 0.75, "explanation": "Prüft die historische Fragestellung (Wurde)." }
             ]
           },
           {
             "id": "conspiracy",
             "label": "Narrativ/Zweifel",
             "rules": [
-              { "source": 42, "target": 44, "strength": 0.95, "explanation": "Verbindet Mondlandung mit Studio." },
-              { "source": 42, "target": 45, "strength": 0.65, "explanation": "Zieht das Event in den fiktionalen Raum." }
+              { "source": 42, "target": 44, "strength": 0.95, "explanation": "Verbindet Mondlandung mit Studio-Kontext." },
+              { "source": 42, "target": 45, "strength": 0.85, "explanation": "Kopplung an fiktionale Begriffe (gedreht)." }
             ]
           }
         ]
