@@ -39,3 +39,33 @@ body {
   animation: pulse-red 1s infinite;
   background-color: #dc2626 !important; /* Force Red */
 }
+
+/* Custom Scrollbar Styling */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;               /* Sehr schmale Breite */
+  height: 5px;
+}
+
+/* Der Hintergrund (Track) - Fast transparent */
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.1); /* Entspricht Slate-900 mit Transparenz */
+  border-radius: 10px;
+}
+
+/* Der Schieber (Thumb) - Dezentes Blau/Slate */
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.2); /* Blau mit geringer Deckkraft */
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+/* Hover-Effekt: Der Schieber wird deutlicher, wenn man mit der Maus drüberfährt */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5); /* Kräftigeres Blau */
+}
+
+/* Für Firefox (eingeschränktes Styling möglich) */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.2) rgba(15, 23, 42, 0.1);
+}

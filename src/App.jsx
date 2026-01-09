@@ -23,7 +23,7 @@ function AppContent() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [theme, setTheme] = useState('dark');
   const [glossaryData, setGlossaryData] = useState(null);
-  const [hoveredItem, setHoveredItem] = useState(null); // Für den Detail-Inspektor
+  const [hoveredItem, setHoveredItem] = useState(null);
 
   const { scenarios, activeScenario, handleScenarioChange } = useScenarios();
   const simulator = useLLMSimulator(activeScenario);
@@ -37,7 +37,6 @@ function AppContent() {
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
-  // DER ENTSCHEIDENDE FIX: Nur beim allerersten Laden blockieren, sonst sanft umschalten.
   if (!scenarios || scenarios.length === 0) {
     return <div className="bg-slate-950 min-h-screen flex items-center justify-center text-blue-500 font-mono uppercase text-xs">Loading Data...</div>;
   }
@@ -51,50 +50,54 @@ function AppContent() {
         scenarios={scenarios}
         activeScenario={activeScenario}
         onScenarioChange={(id) => {
-          setActivePhase(0); // Springt zurück zur Token-Phase
-          handleScenarioChange(id); // Führt den (jetzt korrigierten) Wechsel aus
+          setActivePhase(0);
+          handleScenarioChange(id);
         }}
       />
 
-      <PhaseNavigator activePhase={activePhase} setActivePhase={setActivePhase} theme={theme} />
+      <PhaseNavigator activePhase={activePhase} setActivePhase={setActivePhase} activeScenario={activeScenario} theme={theme} />
 
       <main className="flex-1 flex flex-col items-center py-4 px-4 overflow-x-hidden">
-        <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-6 h-full lg:min-h-[620px]">
+        {/* Container mit fester Höhe für die Desktop-Ansicht */}
+        <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-6 h-full lg:h-[720px]">
 
-          {/* Linkes Panel */}
-          <div className={`flex-[3] relative border rounded-[2.5rem] shadow-2xl overflow-hidden backdrop-blur-md transition-all duration-500 ${theme === 'dark' ? 'bg-slate-900/40 border-slate-800' : 'bg-white/80 border-slate-200 shadow-slate-200'
+          {/* LINKES PANEL: Stabiler Arbeitsbereich */}
+          <div className={`flex-1 relative border rounded-[2.5rem] shadow-2xl overflow-hidden backdrop-blur-md transition-all duration-500 ${theme === 'dark' ? 'bg-slate-900/40 border-slate-800' : 'bg-white/80 border-slate-200 shadow-slate-200'
             }`}>
+
             {(!activeScenario || !simulator) ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4">
                 <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-blue-500">
-                  Verbinde Simulator...
-                </p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-blue-500">Verbinde Simulator...</p>
               </div>
             ) : (
-              <div key={activeScenario.id} className="h-full w-full">
-                {activePhase === 0 && <Phase0_Tokenization simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
-                {activePhase === 1 && <Phase1_Embedding simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
-                {activePhase === 2 && <Phase2_Attention simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
-                {activePhase === 3 && <Phase3_FFN simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
-                {activePhase === 4 && <Phase4_Decoding simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
-                {activePhase === 5 && <Phase5_Analysis simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
+              /* Padding p-6 sorgt für Abstand zum Rand innerhalb des stabilen Panels */
+              <div key={activeScenario.id} className="h-full w-full flex flex-col p-6">
+                <div className="flex-1 relative mt-4">
+                  {activePhase === 0 && <Phase0_Tokenization simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
+                  {activePhase === 1 && <Phase1_Embedding simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
+                  {activePhase === 2 && <Phase2_Attention simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
+                  {activePhase === 3 && <Phase3_FFN simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
+                  {activePhase === 4 && <Phase4_Decoding simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
+                  {activePhase === 5 && <Phase5_Analysis simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Rechts: Sidebar */}
-          <aside className={`transition-all duration-300 ${isSidebarExpanded ? 'flex-1 min-w-[320px]' : 'flex-none w-auto'}`}>
+          {/* RECHTES PANEL: Der fixierte Inspektor */}
+          <aside className="lg:w-[340px] h-full flex-none">
             <PhaseSidebar
               activePhase={activePhase}
               activeScenario={activeScenario}
               simulator={simulator}
-              hoveredItem={hoveredItem} // Neu: Daten an Sidebar übergeben
+              hoveredItem={hoveredItem}
               theme={theme}
               isExpanded={isSidebarExpanded}
               setIsExpanded={setIsSidebarExpanded}
             />
           </aside>
+
         </div>
       </main>
 
