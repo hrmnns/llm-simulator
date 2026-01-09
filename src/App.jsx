@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ScenarioProvider, useScenarios } from './context/ScenarioContext';
 import { useLLMSimulator } from './hooks/useLLMSimulator';
 
-// Kompnenten-Importe
+// Komponenten-Importe
 import Footer from './components/Footer';
 import PhaseNavigator from './components/PhaseNavigator';
 import PhaseSidebar from './components/PhaseSidebar';
@@ -42,7 +42,15 @@ function AppContent() {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-700 ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} font-sans`}>
+    /* RESPONSIVE FIX: 
+      - min-h-screen (Mobil): Seite darf wachsen
+      - lg:h-screen (Desktop): Fixiert auf Fensterhöhe
+      - lg:overflow-hidden (Desktop): Verhindert Browser-Scrollbar
+    */
+    <div className={`min-h-screen lg:h-screen flex flex-col lg:overflow-hidden transition-colors duration-700 ${
+      theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+    } font-sans`}>
+      
       <InternalHeader
         theme={theme}
         toggleTheme={toggleTheme}
@@ -57,13 +65,23 @@ function AppContent() {
 
       <PhaseNavigator activePhase={activePhase} setActivePhase={setActivePhase} activeScenario={activeScenario} theme={theme} />
 
-      <main className="flex-1 flex flex-col items-center py-4 px-4 overflow-x-hidden">
-        {/* Container mit fester Höhe für die Desktop-Ansicht */}
-        <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-6 h-full lg:h-[720px]">
+      {/* MAIN BEREICH:
+        - overflow-y-auto (Mobil): Die ganze Seite scrollt
+        - lg:overflow-hidden (Desktop): Nur interne Panels scrollen
+      */}
+      <main className="flex-1 flex flex-col items-center py-4 px-4 overflow-y-auto lg:overflow-hidden">
+        
+        {/* CONTAINER:
+          - flex-col (Mobil): Panels untereinander
+          - lg:flex-row (Desktop): Panels nebeneinander
+          - h-auto (Mobil) vs lg:h-full (Desktop)
+        */}
+        <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-6 h-auto lg:h-full">
 
-          {/* LINKES PANEL: Stabiler Arbeitsbereich */}
-          <div className={`flex-1 relative border rounded-[2.5rem] shadow-2xl overflow-hidden backdrop-blur-md transition-all duration-500 ${theme === 'dark' ? 'bg-slate-900/40 border-slate-800' : 'bg-white/80 border-slate-200 shadow-slate-200'
-            }`}>
+          {/* LINKES PANEL */}
+          <div className={`w-full lg:flex-1 relative border rounded-[2rem] lg:rounded-[2.5rem] shadow-2xl overflow-hidden backdrop-blur-md transition-all duration-500 flex flex-col min-h-[500px] lg:min-h-0 ${
+            theme === 'dark' ? 'bg-slate-900/40 border-slate-800' : 'bg-white/80 border-slate-200 shadow-slate-200'
+          }`}>
 
             {(!activeScenario || !simulator) ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4">
@@ -71,9 +89,13 @@ function AppContent() {
                 <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-blue-500">Verbinde Simulator...</p>
               </div>
             ) : (
-              /* Padding p-6 sorgt für Abstand zum Rand innerhalb des stabilen Panels */
-              <div key={activeScenario.id} className="h-full w-full flex flex-col p-6">
-                <div className="flex-1 relative mt-4">
+              /* h-full auf Mobil sorgt für Platz, auf Desktop fixiert es */
+              <div key={activeScenario.id} className="h-full w-full flex flex-col p-5 lg:p-6 overflow-hidden">
+                
+                {/* PHASEN-CONTENT:
+                   - Scrollbar nur auf Desktop innerhalb des Panels aktiv
+                */}
+                <div className="flex-1 relative mt-2 lg:mt-4 lg:overflow-y-auto custom-scrollbar lg:pr-2">
                   {activePhase === 0 && <Phase0_Tokenization simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
                   {activePhase === 1 && <Phase1_Embedding simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
                   {activePhase === 2 && <Phase2_Attention simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
@@ -85,8 +107,12 @@ function AppContent() {
             )}
           </div>
 
-          {/* RECHTES PANEL: Der fixierte Inspektor */}
-          <aside className="lg:w-[340px] h-full flex-none">
+          {/* RECHTES PANEL (Aside)
+              - w-full (Mobil)
+              - lg:w-[340px] (Desktop)
+              - h-auto (Mobil) vs lg:h-full (Desktop)
+          */}
+          <aside className="w-full lg:w-[340px] h-auto lg:h-full flex-none">
             <PhaseSidebar
               activePhase={activePhase}
               activeScenario={activeScenario}
@@ -101,7 +127,9 @@ function AppContent() {
         </div>
       </main>
 
-      <Footer />
+      {/* FOOTER: shrink-0 verhindert das Quetschen auf Desktop */}
+      <Footer className="shrink-0" />
+      
       <GlossaryModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} data={glossaryData} />
     </div>
   );
