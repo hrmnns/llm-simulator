@@ -1,75 +1,176 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import PhaseLayout from './../PhaseLayout';
+import { useScenarios } from '../../context/ScenarioContext';
 
 const Phase0_Tokenization = ({ simulator, theme, setHoveredItem }) => {
-  const { phase_0_tokenization } = simulator;
-  const [clickedTokenId, setClickedTokenId] = useState(null);
+  const { activeScenario: contextScenario } = useScenarios();
+  const { phase_0_tokenization, activeScenario: simScenario } = simulator;
+  
+  // States für Selektion und Tooltip-Sichtbarkeit
+  const [selectedTokenId, setSelectedTokenId] = useState(null);
+  const [showTooltip, setShowTooltip] = useState(false);
 
-  if (!phase_0_tokenization) return null;
+  const scenario = contextScenario || simScenario;
+  const tokens = phase_0_tokenization?.tokens || scenario?.phase_0_tokenization?.tokens || [];
+  const rawText = scenario?.input_prompt || "Lade Eingabe-Prompt...";
+
+  if (!tokens.length) return <div className="p-10 text-center opacity-50">Warte auf Token-Daten...</div>;
+
+  const getInspectorData = (token) => ({
+    title: `Token-Analyse: ${token.text}`,
+    subtitle: "Preprocessing (BPE)",
+    data: {
+      "Token-ID": `#${token.id}`,
+      "Inhalt": `"${token.text}"`,
+      "Länge": token.text.length + " Zeichen",
+      "Typ": token.id === 1 ? "Start-of-Sequence" : "Content-Token",
+      "Analyse": token.explanation || "Erfolgreich segmentiert."
+    }
+  });
+
+  useEffect(() => {
+    if (selectedTokenId) {
+      const token = tokens.find(t => t.id === selectedTokenId);
+      if (token) setHoveredItem(getInspectorData(token));
+    }
+  }, [selectedTokenId, tokens]);
+
+  const handleMouseEnter = (token) => {
+    setHoveredItem(getInspectorData(token));
+  };
+
+  const handleMouseLeave = () => {
+    if (selectedTokenId) {
+      const selectedToken = tokens.find(t => t.id === selectedTokenId);
+      if (selectedToken) setHoveredItem(getInspectorData(selectedToken));
+    } else {
+      setHoveredItem(null);
+    }
+  };
+
+  const handleTokenClick = (token, e) => {
+    e.stopPropagation();
+    if (selectedTokenId === token.id) {
+      // Wenn bereits selektiert, Tooltip umschalten
+      setShowTooltip(!showTooltip);
+    } else {
+      // Neu selektieren und Tooltip immer öffnen
+      setSelectedTokenId(token.id);
+      setShowTooltip(true);
+      setHoveredItem(getInspectorData(token));
+    }
+  };
 
   return (
-    <div className="flex flex-col h-full w-full p-8 animate-in fade-in duration-700 relative">
-      <h2 className="text-center text-slate-500 uppercase tracking-[0.2em] text-[10px] mb-10">
-        Input Decomposition (Tokens)
-      </h2>
-
-      <div className="flex flex-wrap justify-center gap-4">
-        {phase_0_tokenization.tokens.map((token, index) => (
-          <div
-            key={index}
-            // WICHTIG: Hier wird z-50 hinzugefügt, wenn das Token aktiv ist
-            className={`group relative flex flex-col items-center p-6 min-w-[100px] rounded-3xl border-2 transition-all duration-300 cursor-pointer ${
-              clickedTokenId === token.id
-                ? 'bg-blue-600 border-blue-400 scale-105 shadow-[0_0_30px_rgba(59,130,246,0.4)] z-50' // z-50 hinzugefügt
-                : theme === 'dark' 
-                  ? 'bg-slate-900 border-slate-800 hover:border-blue-500/50 hover:bg-slate-800 z-10' 
-                  : 'bg-white border-slate-200 hover:border-blue-400 hover:shadow-lg z-10'
-            }`}
-            onClick={() => setClickedTokenId(clickedTokenId === token.id ? null : token.id)}
-            onMouseEnter={() => setHoveredItem({
-              title: `Token Analysis`,
-              data: {
-                "Token-ID": token.id,
-                "Text": token.text,
-                "Länge": token.text.length,
-                "Index": index
-              }
-            })}
-            onMouseLeave={() => setHoveredItem(null)}
-          >
-            <span className={`text-[10px] font-mono mb-1 ${clickedTokenId === token.id ? 'text-blue-200' : 'opacity-40'}`}>
-              #{token.id}
-            </span>
-            <span className={`text-2xl font-black tracking-tighter ${clickedTokenId === token.id ? 'text-white' : 'text-blue-500'}`}>
-              {token.text}
-            </span>
-
-            {/* Der Klick-Tooltip */}
-            {clickedTokenId === token.id && (
-              <div 
-                className="absolute top-full mt-4 w-64 p-4 rounded-2xl border shadow-2xl animate-in slide-in-from-top-2 duration-200 bg-slate-900 border-blue-400 text-white cursor-default left-1/2 -translate-x-1/2"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex justify-between items-center mb-2 border-b border-blue-500/30 pb-2">
-                  <span className="text-[9px] font-black uppercase text-blue-400 tracking-widest text-left">Semantische Bedeutung</span>
-                  <button onClick={() => setClickedTokenId(null)} className="text-lg leading-none opacity-50 hover:opacity-100">&times;</button>
-                </div>
-                <p className="text-[12px] leading-relaxed italic text-slate-200 text-left">
-                  {token.explanation}
-                </p>
-                {/* Pfeil */}
-                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-slate-900 border-l border-t border-blue-400 rotate-45"></div>
-              </div>
-            )}
+    <PhaseLayout
+      title="Phase 0: Tokenisierung"
+      subtitle="Transformation von Text in mathematische IDs"
+      theme={theme}
+      badges={[
+        { text: `Methode: BPE`, className: "border-blue-500/30 text-blue-400 bg-blue-500/5" },
+        { text: `${tokens.length} Einheiten`, className: "border-slate-500/30 text-slate-500 bg-white/5" }
+      ]}
+      visualization={
+        <div 
+          className="w-full h-full flex flex-col space-y-4 lg:space-y-6"
+          onClick={() => { setSelectedTokenId(null); setShowTooltip(false); setHoveredItem(null); }}
+        >
+          {/* INPUT STRING BEREICH */}
+          <div className="flex items-center gap-4 bg-slate-900/40 p-4 rounded-lg border border-white/5">
+            <div className="w-10 h-10 shrink-0 rounded-lg bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-500 text-lg">
+              📑
+            </div>
+            <div className="min-w-0">
+              <span className="text-[7px] uppercase font-black text-slate-600 block mb-0.5 tracking-widest">Input String</span>
+              <p className="text-sm font-medium text-slate-300 truncate italic">
+                "{rawText}"
+              </p>
+            </div>
           </div>
-        ))}
-      </div>
 
-      <div className="mt-auto p-6 bg-blue-600/5 border border-blue-500/10 rounded-2xl">
-        <p className={`text-[10px] uppercase tracking-widest text-center font-bold ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-          Tipp: Klicke auf ein Token für die semantische Analyse.
-        </p>
-      </div>
-    </div>
+          <div className="flex items-center gap-2 px-8">
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-800 to-transparent"></div>
+            <div className="text-[9px] font-black text-blue-500/50 uppercase tracking-tighter">Decomposition</div>
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-800 to-transparent"></div>
+          </div>
+
+          {/* TOKEN CLOUD BEREICH */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {/* p-6 sorgt für genug Platz für skalierte Tokens am Rand */}
+            <div className="flex flex-wrap justify-start content-start gap-3 p-6">
+              {tokens.map((token, index) => {
+                const isSelected = selectedTokenId === token.id;
+                return (
+                  <div
+                    key={index}
+                    className={`
+                      relative group flex flex-col items-center p-3 min-w-[80px] rounded-lg border-2 transition-all duration-300 cursor-pointer
+                      ${isSelected
+                        ? 'bg-blue-600 border-white scale-105 shadow-xl z-20'
+                        : 'bg-slate-900/60 border-slate-800 hover:border-blue-500/50 z-10'
+                      }
+                    `}
+                    onMouseEnter={() => handleMouseEnter(token)}
+                    onMouseLeave={handleMouseLeave}
+                    onClick={(e) => handleTokenClick(token, e)}
+                  >
+                    <span className={`text-[7px] font-mono ${isSelected ? 'text-blue-200' : 'opacity-30'}`}>
+                      #{token.id}
+                    </span>
+                    <span className={`text-base font-black tracking-tighter ${isSelected ? 'text-white' : 'text-blue-500'}`}>
+                      {token.text}
+                    </span>
+
+                    {/* TOOLTIP: Nur anzeigen wenn isSelected UND showTooltip wahr ist */}
+                    {isSelected && showTooltip && (
+                      <div 
+                        className="absolute top-full mt-3 w-56 p-4 rounded-lg border shadow-2xl bg-slate-900 border-white text-white z-[100] left-1/2 -translate-x-1/2 cursor-default"
+                        onClick={(e) => e.stopPropagation()} // Verhindert Schließen beim Klick in den Tooltip
+                      >
+                        <div className="flex justify-between items-center mb-2 border-b border-white/10 pb-2">
+                          <span className="text-[8px] font-black uppercase text-blue-400 tracking-widest">Semantik-Quickinfo</span>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setShowTooltip(false); }}
+                            className="text-white opacity-50 hover:opacity-100 transition-opacity text-sm leading-none"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                        <p className="text-[11px] leading-relaxed italic text-slate-300">
+                          {token.explanation}
+                        </p>
+                        <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900 border-l border-t border-white rotate-45"></div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      }
+      controls={
+        <div className="col-span-full px-4 py-3 bg-slate-900/80 rounded-lg border border-white/5 flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="text-[7px] uppercase font-black text-slate-500 tracking-widest mb-0.5">Encoding Standard</span>
+            <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[10px] font-mono font-bold text-white uppercase tracking-tight">BPE / UTF-8 Protocol</span>
+            </div>
+          </div>
+          <div className="flex gap-6">
+             <div className="text-right border-l border-white/5 pl-6">
+                <span className="text-[7px] uppercase font-black text-slate-600 block">Efficiency</span>
+                <span className="text-[10px] font-mono font-bold text-blue-400">89.4%</span>
+             </div>
+             <div className="text-right border-l border-white/5 pl-6">
+                <span className="text-[7px] uppercase font-black text-slate-600 block">Vocab-ID</span>
+                <span className="text-[10px] font-mono font-bold text-blue-400">#4096-X</span>
+             </div>
+          </div>
+        </div>
+      }
+    />
   );
 };
 
