@@ -15,7 +15,7 @@ const PhaseSidebar = ({ activePhase, activeScenario, simulator, theme, isExpande
 
     const currentPhaseIndex = activePhase === 99 ? 6 : activePhase;
 
-    // --- MINIMIERTER ZUSTAND (Responsive Breite) ---
+    // --- MINIMIERTER ZUSTAND ---
     if (!isExpanded) return (
         <div className="w-full h-full flex items-center justify-center bg-slate-900/20 backdrop-blur-md rounded-2xl border border-slate-800">
             <button
@@ -28,9 +28,7 @@ const PhaseSidebar = ({ activePhase, activeScenario, simulator, theme, isExpande
                         : 'bg-white border-slate-200 hover:bg-blue-50 shadow-sm'}
                 `}
             >
-                {/* Dekorativer Balken: Oben auf Mobil, Links auf Desktop */}
                 <div className="absolute top-0 lg:top-auto lg:left-0 w-full lg:w-[2px] h-[2px] lg:h-3/4 bg-blue-500 rounded-full opacity-40 group-hover:opacity-100 transition-opacity" />
-                
                 <span className="lg:rotate-180 lg:[writing-mode:vertical-lr] text-[9px] font-black uppercase tracking-[0.3em] text-blue-500/70 group-hover:text-blue-500">
                     System Details
                 </span>
@@ -47,10 +45,6 @@ const PhaseSidebar = ({ activePhase, activeScenario, simulator, theme, isExpande
     );
 
     return (
-        /* HAUPT-CONTAINER: 
-           w-full erlaubt es der Sidebar, sich dem aside-Tag der App.jsx anzupassen.
-           Abgerundete Ecken auf rounded-2xl für den einheitlichen Look.
-        */
         <div className={`w-full h-full flex flex-col p-4 lg:p-6 rounded-2xl border shadow-2xl transition-all duration-500 overflow-hidden ${
             theme === 'dark' ? 'bg-slate-900/60 border-slate-800 backdrop-blur-md' : 'bg-white border-slate-200 text-slate-900'
         }`}>
@@ -76,14 +70,14 @@ const PhaseSidebar = ({ activePhase, activeScenario, simulator, theme, isExpande
 
                 {/* Definition Box */}
                 <section>
-                    <div className="p-4 rounded-lg bg-blue-600/5 border border-blue-500/10 border-l-2 border-l-blue-500">
-                        <p className="text-[10px] leading-relaxed opacity-70 italic">
+                    <div className="p-4 rounded-lg bg-blue-600/5 border border-blue-500/10 border-l-2 border-l-blue-500 shadow-inner">
+                        <p className="text-[10px] leading-relaxed opacity-70 italic font-medium">
                             {phaseContent[currentPhaseIndex]?.details}
                         </p>
                     </div>
                 </section>
 
-                {/* Live Parameter */}
+                {/* Live Parameter Telemetrie */}
                 <section>
                     <button
                         onClick={() => setShowTech(!showTech)}
@@ -93,7 +87,6 @@ const PhaseSidebar = ({ activePhase, activeScenario, simulator, theme, isExpande
                     </button>
 
                     {showTech && (
-                        /* Responsive Grid: 2 Spalten auf Desktop/Mobil, 4 Spalten auf breiten Zwischengrößen */
                         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2 animate-in fade-in duration-300">
                             <div className="col-span-2 sm:col-span-4 lg:col-span-2">
                                 <MetricBox label="Active Scenario" value={activeScenario?.name || "None"} />
@@ -131,39 +124,70 @@ const PhaseSidebar = ({ activePhase, activeScenario, simulator, theme, isExpande
                     )}
                 </section>
 
-                {/* Detail-Inspektor */}
+                {/* PIPELINE INSPECTOR (Optimierte Version) */}
                 <section className="flex flex-col border-t border-white/5 pt-5 pb-4">
                     <p className="text-[9px] font-black text-blue-400 mb-4 uppercase tracking-[0.2em] flex items-center gap-2">
                         <span className={`w-1.5 h-1.5 rounded-full ${hoveredItem ? 'bg-blue-500 animate-pulse' : 'bg-slate-700'}`}></span>
                         Pipeline Inspector
                     </p>
 
-                    <div className={`min-h-[140px] rounded-lg border transition-all duration-300 ${hoveredItem
-                        ? (theme === 'dark' ? 'bg-slate-950/40 border-blue-500/30 p-4' : 'bg-blue-50/50 border-blue-200 p-4')
+                    <div className={`min-h-[160px] rounded-xl border transition-all duration-300 ${hoveredItem
+                        ? (theme === 'dark' ? 'bg-slate-950/40 border-blue-500/30 p-4' : 'bg-blue-50/50 border-blue-200 p-4 shadow-inner')
                         : 'border-dashed border-white/5 flex items-center justify-center p-4'
                     }`}>
                         {hoveredItem ? (
-                            <div className="animate-in fade-in duration-300 w-full">
-                                <h6 className="text-[10px] font-bold uppercase mb-3 text-blue-500 border-b border-white/5 pb-1 flex justify-between">
+                            <div className="animate-in fade-in slide-in-from-right-2 duration-300 w-full">
+                                <h6 className="text-[10px] font-black uppercase mb-4 text-blue-500 border-b border-blue-500/20 pb-1 flex justify-between items-end">
                                     <span>{hoveredItem.title}</span>
-                                    {hoveredItem.subtitle && <span className="opacity-40 font-normal lowercase">{hoveredItem.subtitle}</span>}
+                                    {hoveredItem.subtitle && <span className="opacity-40 font-normal lowercase tracking-normal italic">{hoveredItem.subtitle}</span>}
                                 </h6>
 
-                                <div className="space-y-2.5">
+                                <div className="space-y-4">
                                     {Object.entries(hoveredItem.data || {}).map(([key, value]) => {
-                                        if (key === "Trace-Analyse" || key === "Trace") {
+                                        
+                                        // 1. KATEGORIE-HEADER
+                                        if (!value || value.toString().includes('---')) {
                                             return (
-                                                <div key={key} className="mt-3 p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
-                                                    <span className="text-[7px] uppercase font-black text-blue-400/60 block mb-1">Causal Trace</span>
-                                                    <p className="text-[10px] leading-relaxed italic opacity-80 font-medium">{value}</p>
+                                                <div key={key} className="pt-3 border-t border-white/5 first:pt-0 first:border-0">
+                                                    <span className="text-[7px] font-black uppercase tracking-[0.2em] text-slate-500/80">
+                                                        {key.replace(/-/g, '').trim()}
+                                                    </span>
                                                 </div>
                                             );
                                         }
 
+                                        // 2. LONG TEXT BOX (Information / Explanation / Trace)
+                                        const isLongText = key === "Information" || key === "Kontext" || key === "Transfer-Value" || key.toLowerCase().includes("trace") || key === "Erkenntnis";
+                                        
+                                        if (isLongText) {
+                                            return (
+                                                <div key={key} className="flex flex-col gap-1.5">
+                                                    <span className="text-[7px] uppercase font-black text-slate-500/60 tracking-widest">{key}</span>
+                                                    <p className="text-[10px] leading-relaxed italic text-blue-100/90 font-medium bg-blue-500/5 p-2.5 rounded-lg border border-blue-500/10 shadow-inner">
+                                                        {value}
+                                                    </p>
+                                                </div>
+                                            );
+                                        }
+
+                                        // 3. STANDARD STACK (Label über Wert) mit Progress-Bar Logik
+                                        const isNumeric = !isNaN(parseFloat(value)) && (value.toString().includes('%') || key.toLowerCase().includes('score') || key.toLowerCase().includes('logit'));
+                                        const numericValue = isNumeric ? parseFloat(value.toString().replace('%', '')) : 0;
+
                                         return (
-                                            <div key={key} className="flex justify-between items-center text-[9px] font-mono border-b border-white/5 pb-1">
-                                                <span className="opacity-40 uppercase tracking-tighter">{key}</span>
-                                                <span className="font-bold text-blue-400/90">{value}</span>
+                                            <div key={key} className="flex flex-col gap-1">
+                                                <div className="flex justify-between items-end">
+                                                    <span className="text-[7px] uppercase font-black text-slate-500/80 tracking-tighter">{key}</span>
+                                                    <span className="text-[10px] font-bold text-blue-400 font-mono tracking-tight">{value}</span>
+                                                </div>
+                                                {isNumeric && (
+                                                    <div className="w-full h-[3px] bg-slate-800/50 rounded-full mt-1 overflow-hidden">
+                                                        <div 
+                                                            className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)] transition-all duration-1000 ease-out"
+                                                            style={{ width: `${Math.min(numericValue, 100)}%` }}
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}
@@ -171,8 +195,9 @@ const PhaseSidebar = ({ activePhase, activeScenario, simulator, theme, isExpande
                             </div>
                         ) : (
                             <div className="text-center group">
-                                <div className="text-[8px] uppercase tracking-[0.2em] opacity-20 group-hover:opacity-40 transition-opacity">
-                                    Select element<br/>to analyze logic
+                                <div className="text-[8px] uppercase font-black tracking-[0.3em] opacity-10 group-hover:opacity-30 transition-all duration-700">
+                                    System Standby<br/>
+                                    <span className="font-normal lowercase tracking-normal">Select token to probe pipeline</span>
                                 </div>
                             </div>
                         )}
@@ -183,8 +208,8 @@ const PhaseSidebar = ({ activePhase, activeScenario, simulator, theme, isExpande
             {/* 3. FOOTER */}
             <div className="mt-3 pt-3 border-t border-white/5 shrink-0">
                 <div className="flex justify-between items-center opacity-20 text-[7px] font-black uppercase tracking-[0.2em]">
-                    <span>Analysis Engine</span>
-                    <span className="font-mono">v1.3.0</span>
+                    <span>Neural Analysis Engine</span>
+                    <span className="font-mono tracking-tighter">v1.4.2_STABLE</span>
                 </div>
             </div>
         </div>

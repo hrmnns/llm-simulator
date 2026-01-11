@@ -30,6 +30,13 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
 
   const sourceToken = tokens.find(t => Number(t.id) === Number(sourceTokenId));
 
+  const headDefinitions = {
+    1: { label: "Semantik", desc: "Lexikalische Nähe" },
+    2: { label: "Syntax", desc: "Grammatik & Lage" },
+    3: { label: "Logik", desc: "Handlung & Ziel" },
+    4: { label: "Struktur", desc: "Referenz & Artikel" }
+  };
+
   const activeRules = useMemo(() => {
     if (!currentProfile?.rules) return [];
     return currentProfile.rules.filter(r => {
@@ -39,10 +46,29 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
     });
   }, [currentProfile, sourceTokenId, activeHead]);
 
-  // KORREKTUR: Der Inspektor wertet nun die Head-Daten dynamisch aus
+  const headStats = useMemo(() => {
+    const stats = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    if (!currentProfile?.rules) return stats;
+    currentProfile.rules.forEach(r => {
+      stats[r.head] = (stats[r.head] || 0) + 1;
+    });
+    return stats;
+  }, [currentProfile]);
+
+  // NEU: Ermittelt alle Token-IDs, die im aktiven Head eine Rolle spielen (Source oder Target)
+  const tokensWithActivityInHead = useMemo(() => {
+    if (!currentProfile?.rules) return new Set();
+    const activeIds = new Set();
+    currentProfile.rules.forEach(r => {
+      if (Number(r.head) === Number(activeHead)) {
+        activeIds.add(Number(r.source));
+        activeIds.add(Number(r.target));
+      }
+    });
+    return activeIds;
+  }, [currentProfile, activeHead]);
+
   const updateInspector = useCallback((targetId, isHover = false) => {
-    // Wenn wir im "Locked" Modus sind (Klick), aber kein Token hovern,
-    // suchen wir die stärkste Regel für diesen Head, um sie anzuzeigen.
     let effectiveTargetId = targetId;
     let rule = activeRules.find(r => Number(r.target) === Number(effectiveTargetId));
 
@@ -51,29 +77,37 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
       if (strongestRule) {
         effectiveTargetId = strongestRule.target;
         rule = strongestRule;
+      } else {
+        rule = null;
+        effectiveTargetId = null;
       }
     }
 
     const targetToken = tokens.find(t => Number(t.id) === Number(effectiveTargetId));
-    const strength = rule ? rule.strength : 0.02;
+    const strength = rule ? rule.strength : 0;
 
     setHoveredItem({
-      title: isHover ? `🔍 Head #${activeHead}: Analyse` : `🔒 Head #${activeHead}: Fokus`,
-      subtitle: isHover ? "Echtzeit-Interaktion" : "Stärkste Verbindung im Head",
+      title: isHover ? `🔍 ${headDefinitions[activeHead].label}-Check` : `🔒 ${headDefinitions[activeHead].label}-Fokus`,
+      subtitle: headDefinitions[activeHead].desc,
       data: {
-        "--- ROLLEN ---": "",
-        "Query (Zentrum)": `"${sourceToken?.text}"`,
-        "Key (Ziel)": targetToken ? `"${targetToken.text}"` : "Kein Ziel",
-        "--- METRIK ---": "",
-        "Score": strength.toFixed(4),
-        "Gewichtung": (strength * 100).toFixed(1) + "%",
-        "--- KONTEXT ---": "",
-        "Erkenntnis": rule?.explanation || "Neutrales Rauschen."
+        "--- Mechanik": "---",
+        "QUERY_LABEL": "Query (Zentrum)",
+        "QUERY_VALUE": sourceToken ? `"${sourceToken.text}" (${sourceToken.id})` : "Keine Auswahl",
+        "KEY_LABEL": "Key (Ziel)",
+        "KEY_VALUE": rule ? `"${targetToken?.text}" (${targetToken?.id})` : (isHover ? "Kein Fokus" : "Standby / Inaktiv"),
+        "--- Mathematik": "---",
+        "Attention Score": rule ? (strength * 100).toFixed(1) + "%" : "0.0%",
+        "Raw Weight": strength.toFixed(4),
+        "--- Erkenntnis": "---",
+        "Information": rule 
+          ? rule.explanation 
+          : isHover 
+            ? "Dieser Kopf sieht hier keine Relevanz."
+            : `Für "${sourceToken?.text}" hat der ${headDefinitions[activeHead].label}-Head keine spezifischen Regeln gefunden.`
       }
     });
   }, [tokens, activeRules, setHoveredItem, sourceToken, activeHead, sourceTokenId]);
 
-  // Effekt triggert nun bei JEDER Änderung der Rules (also auch bei Head-Wechsel)
   useEffect(() => {
     updateInspector(hoveredTokenId || selectedTokenId, !!hoveredTokenId);
   }, [activeRules, hoveredTokenId, selectedTokenId, updateInspector]);
@@ -82,8 +116,6 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
     const targetId = hoveredTokenId || selectedTokenId;
     if (!targetId) return null;
     let rule = activeRules.find(r => Number(r.target) === Number(targetId));
-    
-    // Fallback für die Explanation Box: Zeige stärkste Regel, wenn selektiertes Token keine eigene für diesen Head hat
     if (!rule && targetId === selectedTokenId) {
       rule = [...activeRules].sort((a, b) => b.strength - a.strength)[0];
     }
@@ -104,9 +136,9 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
       subtitle="Multi-Head Interaktions-Analyse"
       theme={theme}
       badges={[
-        { text: `Head #${activeHead}`, className: "border-blue-500/30 text-blue-400 bg-blue-500/10" },
+        { text: headDefinitions[activeHead].label, className: "border-blue-500/30 text-blue-400 bg-blue-500/10" },
         { text: `Aktiv: ${activeRules.length}`, className: "border-blue-500/30 text-blue-400 bg-blue-500/10" },
-        { text: `Profil-Rules: ${currentProfile?.rules?.length || 0}`, className: "border-slate-500/30 text-slate-500 bg-white/5" }
+        { text: `Source: ${sourceToken?.text}`, className: "border-slate-500/30 text-slate-500 bg-white/5" }
       ]}
       visualization={
         <div className="relative w-full h-[450px] lg:h-full flex items-center justify-center overflow-hidden bg-slate-950/20 rounded-2xl" 
@@ -117,7 +149,6 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
               <defs>
                 <filter id="glowAtt"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
               </defs>
-
               {tokens.map((token, i) => {
                 if (Number(token.id) === Number(sourceTokenId)) return null;
                 const angle = (i / tokens.length) * 2 * Math.PI - Math.PI / 2;
@@ -125,7 +156,6 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
                 const ty = center + Math.sin(angle) * radius;
                 const rule = activeRules.find(r => Number(r.target) === Number(token.id));
                 const strength = rule ? rule.strength : 0;
-
                 return (
                   <g key={`line-${token.id}`}>
                     <line x1={center} y1={center} x2={tx} y2={ty} stroke="currentColor" className="text-slate-800" strokeWidth="0.5" strokeDasharray="2 4" />
@@ -141,7 +171,6 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
                 );
               })}
             </svg>
-
             <div className="absolute inset-0 w-full h-full pointer-events-none z-20">
               {tokens.map((token, i) => {
                 const isCenter = Number(token.id) === Number(sourceTokenId);
@@ -150,6 +179,25 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
                 const yPos = isCenter ? 50 : (50 + (Math.sin(angle) * (radius / size * 100)));
                 const rule = activeRules.find(r => Number(r.target) === Number(token.id));
                 const strength = rule ? rule.strength : 0;
+
+                // NEU: Prüfen, ob dieses Token im aktuellen Head aktiv ist
+                const hasActivity = tokensWithActivityInHead.has(Number(token.id));
+
+                // Dynamisches Styling für die Token-Pille
+                let tokenClasses = "px-2 py-0.5 rounded border-2 font-mono text-[9px] font-bold transition-all cursor-pointer ";
+                let tokenStyle = {};
+
+                if (strength > 0.1) {
+                  // Fall 1: Volle Interaktion (Hover/Klick) -> Hell & Groß
+                  tokenClasses += 'bg-slate-900 border-white text-white scale-110 shadow-lg';
+                } else if (hasActivity && !isCenter) {
+                  // Fall 2: Subtle Hint (Aktiv im Head, aber nicht fokussiert) -> Farbiger Schimmer
+                  tokenClasses += 'bg-slate-950/80 text-slate-300 hover:border-slate-300 hover:text-white';
+                  tokenStyle = { borderColor: `${themeColor}60`, boxShadow: `0 0 12px ${themeColor}30` };
+                } else {
+                  // Fall 3: Inaktiv -> Dunkel & Grau
+                  tokenClasses += 'bg-slate-950/90 border-slate-800 text-slate-600 hover:border-slate-500';
+                }
 
                 return (
                   <div key={`token-pill-${token.id}`} className="absolute pointer-events-auto transition-all duration-700 ease-in-out"
@@ -169,8 +217,8 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
                           onMouseEnter={() => setHoveredTokenId(token.id)}
                           onMouseLeave={() => setHoveredTokenId(null)}
                           onClick={(e) => { e.stopPropagation(); setSelectedTokenId(token.id); }}
-                          className={`px-2 py-0.5 rounded border-2 font-mono text-[9px] font-bold transition-all cursor-pointer
-                            ${strength > 0.1 ? 'bg-slate-900 border-white text-white scale-110 shadow-lg' : 'bg-slate-950/90 border-slate-800 text-slate-600 hover:border-slate-500'}`}
+                          className={tokenClasses}
+                          style={tokenStyle}
                         >
                           {token.text}
                         </div>
@@ -181,7 +229,6 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
               })}
             </div>
           </div>
-
           {activeExplanation && (
             <div className="absolute bottom-4 left-4 right-4 bg-slate-900/90 border border-white/10 p-3 rounded-xl shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-2 duration-300 z-50">
               <div className="flex items-start gap-3">
@@ -197,12 +244,26 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
       }
       controls={[
         <div key="heads-ctrl" className="flex flex-col gap-2">
-          <span className="text-[8px] font-black uppercase tracking-widest text-blue-500/80">Multi-Head Attention</span>
-          <div className="flex gap-2">
+          <span className="text-[8px] font-black uppercase tracking-widest text-blue-500/80">Multi-Head Specialization</span>
+          <div className="grid grid-cols-2 gap-2">
             {[1, 2, 3, 4].map(h => (
-              <button key={h} onClick={() => setActiveHead(h)} className={`flex-1 h-10 rounded-xl flex flex-col items-center justify-center transition-all duration-300 border ${activeHead === h ? 'bg-blue-600 border-blue-400 text-white shadow-lg' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700'}`}>
-                <span className="text-[10px] font-black">H{h}</span>
-                <div className={`w-1 h-1 rounded-full mt-0.5 ${activeHead === h ? 'bg-white' : 'bg-transparent'}`} />
+              <button 
+                key={h} 
+                onClick={() => setActiveHead(h)} 
+                className={`relative h-12 rounded-xl flex flex-col items-center justify-center transition-all duration-300 border ${
+                  activeHead === h ? 'bg-blue-600 border-blue-400 text-white shadow-lg' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700'
+                }`}
+              >
+                <span className="text-[9px] font-black uppercase tracking-tighter">{headDefinitions[h].label}</span>
+                <span className="text-[7px] opacity-60 font-medium">Head #{h}</span>
+                
+                {headStats[h] > 0 && (
+                  <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold shadow-lg animate-in zoom-in duration-300 ${
+                    activeHead === h ? 'bg-white text-blue-600' : 'bg-blue-500 text-white'
+                  }`}>
+                    {headStats[h]}
+                  </div>
+                )}
               </button>
             ))}
           </div>
@@ -211,7 +272,7 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
           <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Kontext-Layer (Inferenz)</span>
           <div className="grid grid-cols-2 gap-2">
             {profiles.map(p => (
-              <button key={p.id} onClick={() => { setSelectedTokenId(null); setActiveProfileId(p.id); setHoveredTokenId(null); }} className={`h-10 px-4 rounded-xl border text-[9px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-3 ${activeProfileId === p.id ? 'bg-white/10 border-white/40 text-white' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700'}`}>
+              <button key={p.id} onClick={() => { setSelectedTokenId(null); setActiveProfileId(p.id); setHoveredTokenId(null); }} className={`h-10 px-4 rounded-xl border text-[9px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-3 ${activeProfileId === p.id ? 'bg-white/10 border-white/40 text-white shadow-inner' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700'}`}>
                 <div className={`w-1.5 h-1.5 rounded-full flex-none ${activeProfileId === p.id ? (p.id.includes('emotional') ? 'bg-purple-500 animate-pulse' : 'bg-blue-500 animate-pulse') : 'bg-slate-700'}`} />
                 <span className="truncate">{p.label}</span>
               </button>
