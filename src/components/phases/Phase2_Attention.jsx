@@ -6,6 +6,7 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
   const { activeScenario } = useScenarios();
   const { activeProfileId, setActiveProfileId } = simulator;
   const [selectedTokenId, setSelectedTokenId] = useState(null);
+  const [hoveredTokenId, setHoveredTokenId] = useState(null);
   const [activeHead, setActiveHead] = useState(1);
 
   if (!activeScenario) return null;
@@ -38,29 +39,56 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
     });
   }, [currentProfile, sourceTokenId, activeHead]);
 
-  const totalProfileRelations = currentProfile?.rules?.length || 0;
+  // KORREKTUR: Der Inspektor wertet nun die Head-Daten dynamisch aus
+  const updateInspector = useCallback((targetId, isHover = false) => {
+    // Wenn wir im "Locked" Modus sind (Klick), aber kein Token hovern,
+    // suchen wir die stärkste Regel für diesen Head, um sie anzuzeigen.
+    let effectiveTargetId = targetId;
+    let rule = activeRules.find(r => Number(r.target) === Number(effectiveTargetId));
 
-  const updateInspector = useCallback((tokenId) => {
-    if (!tokenId) { setHoveredItem(null); return; }
-    const token = tokens.find(t => Number(t.id) === Number(tokenId));
-    const rule = activeRules.find(r => Number(r.target) === Number(tokenId));
-    const strength = rule ? rule.strength : 0.05;
+    if (!isHover && (!rule || Number(targetId) === Number(sourceTokenId))) {
+      const strongestRule = [...activeRules].sort((a, b) => b.strength - a.strength)[0];
+      if (strongestRule) {
+        effectiveTargetId = strongestRule.target;
+        rule = strongestRule;
+      }
+    }
+
+    const targetToken = tokens.find(t => Number(t.id) === Number(effectiveTargetId));
+    const strength = rule ? rule.strength : 0.02;
 
     setHoveredItem({
-      title: `Attention Head #${activeHead}`,
-      subtitle: "Vektor-Interaktion (Dot Product)",
+      title: isHover ? `🔍 Head #${activeHead}: Analyse` : `🔒 Head #${activeHead}: Fokus`,
+      subtitle: isHover ? "Echtzeit-Interaktion" : "Stärkste Verbindung im Head",
       data: {
-        "Query": `"${sourceToken?.text}"`,
-        "Key": `"${token?.text}"`,
-        "Softmax Score": (strength * 100).toFixed(1) + "%",
-        "Context": rule?.explanation || "Neutraler Bezug."
+        "--- ROLLEN ---": "",
+        "Query (Zentrum)": `"${sourceToken?.text}"`,
+        "Key (Ziel)": targetToken ? `"${targetToken.text}"` : "Kein Ziel",
+        "--- METRIK ---": "",
+        "Score": strength.toFixed(4),
+        "Gewichtung": (strength * 100).toFixed(1) + "%",
+        "--- KONTEXT ---": "",
+        "Erkenntnis": rule?.explanation || "Neutrales Rauschen."
       }
     });
-  }, [tokens, activeRules, setHoveredItem, sourceToken, activeHead]);
+  }, [tokens, activeRules, setHoveredItem, sourceToken, activeHead, sourceTokenId]);
 
+  // Effekt triggert nun bei JEDER Änderung der Rules (also auch bei Head-Wechsel)
   useEffect(() => {
-    if (selectedTokenId) updateInspector(selectedTokenId);
-  }, [activeProfileId, selectedTokenId, updateInspector, activeHead]);
+    updateInspector(hoveredTokenId || selectedTokenId, !!hoveredTokenId);
+  }, [activeRules, hoveredTokenId, selectedTokenId, updateInspector]);
+
+  const activeExplanation = useMemo(() => {
+    const targetId = hoveredTokenId || selectedTokenId;
+    if (!targetId) return null;
+    let rule = activeRules.find(r => Number(r.target) === Number(targetId));
+    
+    // Fallback für die Explanation Box: Zeige stärkste Regel, wenn selektiertes Token keine eigene für diesen Head hat
+    if (!rule && targetId === selectedTokenId) {
+      rule = [...activeRules].sort((a, b) => b.strength - a.strength)[0];
+    }
+    return rule?.explanation;
+  }, [hoveredTokenId, selectedTokenId, activeRules]);
 
   const getHeadColor = (head, isEmo) => {
     if (isEmo) return head === 1 ? '#a855f7' : head === 2 ? '#d946ef' : head === 3 ? '#8b5cf6' : '#c084fc';
@@ -73,19 +101,18 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
   return (
     <PhaseLayout
       title="Phase 2: Self-Attention"
-      subtitle="Exakter Vektor-Abgleich"
+      subtitle="Multi-Head Interaktions-Analyse"
       theme={theme}
       badges={[
         { text: `Head #${activeHead}`, className: "border-blue-500/30 text-blue-400 bg-blue-500/10" },
-        { text: `Aktiv: ${activeRules.length}`, className: isEmotional ? "border-purple-500/30 text-purple-400 bg-purple-500/10" : "border-blue-500/30 text-blue-400 bg-blue-500/10" },
-        { text: `Total (Profil): ${totalProfileRelations}`, className: "border-slate-500/30 text-slate-500 bg-white/5" }
+        { text: `Aktiv: ${activeRules.length}`, className: "border-blue-500/30 text-blue-400 bg-blue-500/10" },
+        { text: `Profil-Rules: ${currentProfile?.rules?.length || 0}`, className: "border-slate-500/30 text-slate-500 bg-white/5" }
       ]}
       visualization={
-        <div className="relative w-full h-[450px] lg:h-full flex items-center justify-center overflow-hidden bg-slate-950/20 rounded-2xl" onClick={() => { setSelectedTokenId(null); setHoveredItem(null); }}>
+        <div className="relative w-full h-[450px] lg:h-full flex items-center justify-center overflow-hidden bg-slate-950/20 rounded-2xl" 
+             onClick={() => { setSelectedTokenId(null); setHoveredTokenId(null); }}>
           
           <div className="relative h-[90%] aspect-square">
-            
-            {/* SVG LAYER */}
             <svg viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 w-full h-full overflow-visible pointer-events-none z-10">
               <defs>
                 <filter id="glowAtt"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -115,49 +142,32 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
               })}
             </svg>
 
-            {/* HTML LAYER */}
             <div className="absolute inset-0 w-full h-full pointer-events-none z-20">
               {tokens.map((token, i) => {
                 const isCenter = Number(token.id) === Number(sourceTokenId);
                 const angle = (i / tokens.length) * 2 * Math.PI - Math.PI / 2;
-                
-                // Positionierung: Wenn isCenter, dann ab in die Mitte (50/50)
                 const xPos = isCenter ? 50 : (50 + (Math.cos(angle) * (radius / size * 100)));
                 const yPos = isCenter ? 50 : (50 + (Math.sin(angle) * (radius / size * 100)));
-                
                 const rule = activeRules.find(r => Number(r.target) === Number(token.id));
                 const strength = rule ? rule.strength : 0;
 
                 return (
-                  <div 
-                    key={`token-pill-${token.id}`}
-                    className="absolute pointer-events-auto transition-all duration-700 ease-in-out"
-                    style={{ 
-                      left: `${xPos}%`, 
-                      top: `${yPos}%`, 
-                      transform: 'translate(-50%, -50%)',
-                      zIndex: isCenter ? 30 : 20 
-                    }}
-                  >
+                  <div key={`token-pill-${token.id}`} className="absolute pointer-events-auto transition-all duration-700 ease-in-out"
+                    style={{ left: `${xPos}%`, top: `${yPos}%`, transform: 'translate(-50%, -50%)', zIndex: isCenter ? 30 : 20 }}>
                     {isCenter ? (
-                      /* Zentrales Query-Token - IMMER SICHTBAR */
-                      <div className="flex flex-col items-center translate-y-[-5px] animate-in zoom-in duration-500">
+                      <div className="flex flex-col items-center translate-y-[-5px]">
                         <span className="text-[7px] font-black uppercase tracking-widest mb-1" style={{ color: themeColor }}>Query</span>
-                        <div 
-                          className="w-20 h-20 rounded-full border-4 flex items-center justify-center bg-slate-900 shadow-[0_0_30px_rgba(0,0,0,0.5)] transition-all duration-700" 
-                          style={{ borderColor: themeColor, boxShadow: `0 0 20px ${themeColor}33` }}
-                        >
-                          <span className="text-white font-black text-[10px] uppercase tracking-tighter px-2 text-center leading-tight">
-                            {token.text}
-                          </span>
+                        <div className="w-20 h-20 rounded-full border-4 flex items-center justify-center bg-slate-900 shadow-[0_0_30px_rgba(0,0,0,0.5)] transition-all duration-700" 
+                          style={{ borderColor: themeColor }}>
+                          <span className="text-white font-black text-[10px] uppercase tracking-tighter px-2 text-center leading-tight">{token.text}</span>
                         </div>
                       </div>
                     ) : (
-                      /* Key-Tokens */
                       <div className="relative group flex flex-col items-center">
                         <span className="absolute -top-3 text-[7px] text-slate-500 font-mono opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Key</span>
                         <div 
-                          onMouseEnter={() => updateInspector(token.id)}
+                          onMouseEnter={() => setHoveredTokenId(token.id)}
+                          onMouseLeave={() => setHoveredTokenId(null)}
                           onClick={(e) => { e.stopPropagation(); setSelectedTokenId(token.id); }}
                           className={`px-2 py-0.5 rounded border-2 font-mono text-[9px] font-bold transition-all cursor-pointer
                             ${strength > 0.1 ? 'bg-slate-900 border-white text-white scale-110 shadow-lg' : 'bg-slate-950/90 border-slate-800 text-slate-600 hover:border-slate-500'}`}
@@ -171,6 +181,18 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
               })}
             </div>
           </div>
+
+          {activeExplanation && (
+            <div className="absolute bottom-4 left-4 right-4 bg-slate-900/90 border border-white/10 p-3 rounded-xl shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-2 duration-300 z-50">
+              <div className="flex items-start gap-3">
+                <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-none animate-pulse" style={{ backgroundColor: themeColor }}></div>
+                <div>
+                  <div className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-0.5">Context Insight</div>
+                  <p className="text-[10px] text-slate-200 leading-relaxed font-medium italic">{activeExplanation}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       }
       controls={[
@@ -189,7 +211,7 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
           <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Kontext-Layer (Inferenz)</span>
           <div className="grid grid-cols-2 gap-2">
             {profiles.map(p => (
-              <button key={p.id} onClick={() => { setSelectedTokenId(null); setActiveProfileId(p.id); }} className={`h-10 px-4 rounded-xl border text-[9px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-3 ${activeProfileId === p.id ? 'bg-white/10 border-white/40 text-white shadow-inner' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700'}`}>
+              <button key={p.id} onClick={() => { setSelectedTokenId(null); setActiveProfileId(p.id); setHoveredTokenId(null); }} className={`h-10 px-4 rounded-xl border text-[9px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-3 ${activeProfileId === p.id ? 'bg-white/10 border-white/40 text-white' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700'}`}>
                 <div className={`w-1.5 h-1.5 rounded-full flex-none ${activeProfileId === p.id ? (p.id.includes('emotional') ? 'bg-purple-500 animate-pulse' : 'bg-blue-500 animate-pulse') : 'bg-slate-700'}`} />
                 <span className="truncate">{p.label}</span>
               </button>
