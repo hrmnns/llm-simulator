@@ -1,5 +1,6 @@
 import React from 'react';
 import { useScenarios } from '../context/ScenarioContext';
+import AppConfig from '../utils/AppConfig'; 
 
 const IntroScreen = ({ onStart, theme }) => {
   const { scenarios, scenariosData } = useScenarios();
@@ -19,22 +20,18 @@ const IntroScreen = ({ onStart, theme }) => {
         {/* HEADER SECTION */}
         <div className="text-center mb-16 animate-in fade-in slide-in-from-top duration-1000">
           <h1 className="text-5xl lg:text-6xl font-black tracking-tighter mb-2 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent uppercase">
-            LLM Explorer
+            LLM Explorer 
           </h1>
           
           {/* VERSION & BUILD INFO */}
           <div className="flex flex-col items-center mb-8 space-y-1">
             <div className="flex gap-3 items-center opacity-60">
               <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-slate-500">
-                Engine: <span className="text-purple-500 font-bold">v{scenariosData?.version || "?.?"}</span>
-              </span>
-              <span className="text-slate-800">|</span>
-              <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-slate-500">
-                Build: <span className="text-blue-500 font-bold">{appVersion}</span>
+                {AppConfig.getFullVersionString(scenariosData)}
               </span>
             </div>
             <div className="text-[9px] font-mono uppercase tracking-[0.2em] text-slate-600 opacity-40">
-              {buildDate}
+              {AppConfig.getBuildDate()}
             </div>
           </div>
 

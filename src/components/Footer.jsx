@@ -1,5 +1,6 @@
 import React from 'react';
 import { useScenarios } from '../context/ScenarioContext'; 
+import AppConfig from '../utils/AppConfig'; 
 
 const Footer = () => {
   const { scenariosData } = useScenarios();
@@ -12,14 +13,13 @@ const Footer = () => {
       <div className="text-[9px] text-slate-600 font-mono uppercase tracking-[0.3em] opacity-40">
         CHERWARE.DE
       </div>
-      
       <div className="flex gap-4 items-center">
         <div className="text-[9px] text-slate-500 font-mono bg-slate-900/50 px-3 py-1 rounded border border-slate-800/50">
-          DATA ENGINE: <span className="text-purple-500 font-bold">v{scenariosData?.version || "?.?"}</span>
+          DATA ENGINE: <span className="text-purple-500 font-bold">v{AppConfig.getEngineVersion(scenariosData)}</span>
         </div>
 
         <div className="text-[9px] text-slate-500 font-mono bg-slate-900/50 px-3 py-1 rounded border border-slate-800/50">
-          BUILD: <span className="text-blue-500 font-bold">{appVersion}</span>
+          BUILD: <span className="text-blue-500 font-bold">{AppConfig.getAppVersion(scenariosData)}</span>
         </div>
         
         <div className="text-[9px] text-slate-500 font-mono opacity-40">
