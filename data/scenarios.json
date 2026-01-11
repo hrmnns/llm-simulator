@@ -6,33 +6,33 @@
       "id": "was-ist-ein-hund",
       "name": "1. Begriffs-Definition: Hund",
       "input_prompt": "Was ist ein Hund?",
-      "explanation": "Dieses Szenario zeigt die Balance zwischen biologischen Fakten (Säugetier) und sozialen Rollen (Gefährte).",
+      "explanation": "Dieses Szenario illustriert, wie verschiedene Attention-Heads biologische Fakten von sozialen Rollen trennen und wie diese Gewichtung die Antwort determiniert.",
       "phase_0_tokenization": {
         "tokens": [
           {
             "id": 1,
             "text": "Was",
-            "explanation": "Interrogativ-Token zur Einleitung."
+            "explanation": "Interrogativ-Token (Fragestellung)."
           },
           {
             "id": 2,
             "text": "ist",
-            "explanation": "Kopula-Verb für Identität."
+            "explanation": "Kopula-Verb (Identitäts-Zuweisung)."
           },
           {
             "id": 3,
             "text": "ein",
-            "explanation": "Indefiniter Artikel."
+            "explanation": "Indefiniter Artikel (Objekt-Bezug)."
           },
           {
             "id": 4,
             "text": "Hund",
-            "explanation": "Zentrales Nomen (Ankerpunkt)."
+            "explanation": "Zentrales Nomen (Semantischer Anker)."
           },
           {
             "id": 5,
             "text": "?",
-            "explanation": "Satzabschlusszeichen."
+            "explanation": "Satzabschluss (Interrogations-Signal)."
           }
         ]
       },
@@ -99,37 +99,55 @@
         "attention_profiles": [
           {
             "id": "scientific",
-            "label": "Wissenschaftlich",
+            "label": "Wissenschaftlich (Fokus: Taxonomie)",
             "rules": [
               {
+                "head": 1,
                 "source": 4,
                 "target": 1,
                 "strength": 0.9,
-                "explanation": "Sucht nach der Definition (Was)."
+                "explanation": "Head 1 (Syntax): Verknüpft das Subjekt 'Hund' mit dem Fragewort 'Was', um den Definitions-Modus zu aktivieren."
               },
               {
+                "head": 1,
                 "source": 4,
                 "target": 2,
-                "strength": 0.75,
-                "explanation": "Prüft die Seins-Beziehung (ist)."
+                "strength": 0.85,
+                "explanation": "Head 1 (Syntax): Bestimmt die 'ist'-Relation für eine faktische Identitätsprüfung."
+              },
+              {
+                "head": 2,
+                "source": 4,
+                "target": 4,
+                "strength": 0.95,
+                "explanation": "Head 2 (Semantik): Extrahiert biologische Merkmale aus dem Vektorraum (Säugetier, Canis Lupus)."
               }
             ]
           },
           {
             "id": "emotional",
-            "label": "Poetisch/Emotional",
+            "label": "Poetisch/Sozial (Fokus: Beziehung)",
             "rules": [
               {
+                "head": 1,
                 "source": 4,
                 "target": 3,
-                "strength": 0.95,
-                "explanation": "Fokus auf das Individuum (ein Hund)."
+                "strength": 0.92,
+                "explanation": "Head 1 (Bezug): Fokus auf 'ein Hund' als individuelles Gegenüber/Gefährte statt einer Gattung."
               },
               {
+                "head": 2,
+                "source": 4,
+                "target": 1,
+                "strength": 0.3,
+                "explanation": "Head 2 (Kontext): Geringere Gewichtung der harten Definition zugunsten assoziativer Merkmale."
+              },
+              {
+                "head": 3,
                 "source": 4,
                 "target": 4,
-                "strength": 0.6,
-                "explanation": "Eigen-Gewichtung des Begriffs."
+                "strength": 0.8,
+                "explanation": "Head 3 (Emotion): Aktiviert Cluster für 'Treue' und 'Freundschaft' im latenten Raum."
               }
             ]
           }
@@ -146,7 +164,7 @@
               },
               {
                 "label": "Sozial",
-                "activation": 0.3
+                "activation": 0.25
               },
               {
                 "label": "Poetisch",
@@ -154,7 +172,7 @@
               },
               {
                 "label": "Evolutionär",
-                "activation": 0.6
+                "activation": 0.75
               }
             ]
           },
@@ -163,19 +181,19 @@
             "activations": [
               {
                 "label": "Wissenschaftlich",
-                "activation": 0.2
+                "activation": 0.15
               },
               {
                 "label": "Sozial",
-                "activation": 0.85
+                "activation": 0.88
               },
               {
                 "label": "Poetisch",
-                "activation": 0.95
+                "activation": 0.92
               },
               {
                 "label": "Evolutionär",
-                "activation": 0.1
+                "activation": 0.05
               }
             ]
           }
@@ -187,72 +205,51 @@
             "label": "Säugetier",
             "logit": 8.5,
             "type": "Wissenschaftlich",
-            "hallucination_risk": 0.05,
-            "causality_trace": "Wurde priorisiert, da Phase 3 das 'Wissenschaftliche Cluster' zu 95% aktiviert hat. Die Wurzel liegt in Phase 2, die den Fokus (Attention) extrem stark auf die Identitäts-Koppelung 'Hund' + 'ist' gesetzt hat."
+            "hallucination_risk": 0.02,
+            "causality_trace": "Dominantes Resultat aus Head 1 & 2 (Scientific). Die starke Koppelung von 'Hund' an 'Was ist' triggert im FFN das Cluster für biologische Taxonomie."
           },
           {
             "label": "Gefährte",
-            "logit": 7.8,
+            "logit": 7.9,
             "type": "Sozial",
-            "hallucination_risk": 0.1,
-            "causality_trace": "Entstand durch die Aktivierung des 'Sozialen Clusters'. Phase 2 hat hierbei die Beziehung zwischen dem unbestimmten Artikel 'ein' und 'Hund' gewichtet, was auf eine soziale Rolle hindeutet."
+            "hallucination_risk": 0.05,
+            "causality_trace": "Primäres Resultat bei emotionalem Profil. Head 1 (Bezug auf 'ein') verschiebt die Bedeutung weg von der Biologie hin zur sozialen Rolle."
           },
           {
-            "label": "Haustier",
-            "logit": 7.2,
-            "type": "Sozial",
-            "hallucination_risk": 0.1,
-            "causality_trace": "Entstand durch die Aktivierung des 'Sozialen Clusters'. Phase 2 hat hierbei die Beziehung zwischen dem unbestimmten Artikel 'ein' und 'Hund' gewichtet, was auf eine soziale Rolle hindeutet."
-          },          
-          {
             "label": "Wolfserbe",
-            "logit": 6.5,
+            "logit": 6.8,
             "type": "Evolutionär",
-            "hallucination_risk": 0.1,
-            "causality_trace": "ToDo: Warum würde das ausgewählt?"
-          },   
+            "hallucination_risk": 0.08,
+            "causality_trace": "Aktiviert durch Head 2 (Semantik) im scientific-Profil. Die KI erkennt die evolutionäre Kette, da 'Hund' im Embedding-Raum nahe bei 'Wolf' liegt."
+          },
           {
             "label": "Vierbeiner",
-            "logit": 5.9,
+            "logit": 6.2,
             "type": "Wissenschaftlich",
-            "hallucination_risk": 0.2,
-            "causality_trace": "ToDo: Warum würde das ausgewählt?"
+            "hallucination_risk": 0.12,
+            "causality_trace": "Ein deskriptives Backup-Token. Wird gewählt, wenn die Aufmerksamkeit auf morphologische Merkmale (Körperbau) im Vektorraum fällt."
           },
           {
             "label": "Freund",
-            "logit": 5.2,
+            "logit": 5.9,
             "type": "Poetisch",
             "hallucination_risk": 0.15,
-            "causality_trace": "ToDo: Warum würde das ausgewählt?"
+            "causality_trace": "Resultiert aus Head 3 (Emotion). Die Koppelung 'Hund' + 'emotionales Profil' aktiviert kulturelle Assoziationsketten im FFN."
           },
           {
-            "label": "Wächter",
-            "logit": 4.1,
+            "label": "Haustier",
+            "logit": 5.1,
             "type": "Sozial",
-            "hallucination_risk": 0.15,
-            "causality_trace": "ToDo: Warum würde das ausgewählt?"
-          },
-          {
-            "label": "Bellen",
-            "logit": 3.2,
-            "type": "Wissenschaftlich",
-            "hallucination_risk": 3.2,
-            "causality_trace": "ToDo: Warum würde das ausgewählt?"
-          },
-          {
-            "label": "Schatten",
-            "logit": 2.1,
-            "type": "Poetisch",
-            "hallucination_risk": 3.2,
-            "causality_trace": "ToDo: Warum würde das ausgewählt?"
+            "hallucination_risk": 0.05,
+            "causality_trace": "Eine funktionale Definition. Entsteht durch die moderate Aktivierung des sozialen Clusters in beiden Profilen."
           }
         ]
       },
       "phase_5_analysis": {
         "summary_points": [
-          "Wissenschaftlicher Fokus führt zur exakten biologischen Einordnung.",
-          "Emotionaler Fokus aktiviert soziale Konzepte wie 'Gefährte'.",
-          "Vektor-Rauschen kann die Grenze zwischen biologisch und emotional verwischen."
+          "Die Multi-Head Attention erlaubt es dem Modell, gleichzeitig die Syntax (Was ist...) und die Semantik (Hund) zu analysieren.",
+          "Im wissenschaftlichen Profil dominiert die Query-Key-Relation zur Identitätsfrage, was zu biologischen Antworten führt.",
+          "Das emotionale Profil nutzt relationale Heads, die den Fokus auf die Beziehung zwischen Mensch und Tier lenken."
         ]
       }
     },
@@ -260,38 +257,38 @@
       "id": "bank-polysemie",
       "name": "2. Polysemie: Das Bank-Rätsel",
       "input_prompt": "Der Bankräuber ging zur Bank und setzte sich auf die Bank am Fluss.",
-      "explanation": "Demonstration der Polysemie-Auflösung durch Kontext-Vektoren.",
+      "explanation": "Dieses Szenario zeigt die Polysemie-Auflösung. Dasselbe Wort ('Bank') erhält durch unterschiedliche Kontext-Partner völlig andere mathematische Repräsentationen.",
       "phase_0_tokenization": {
         "tokens": [
           {
             "id": 10,
             "text": "Der",
-            "explanation": "Artikel."
+            "explanation": "Bestimmter Artikel."
           },
           {
             "id": 11,
             "text": "Bank",
-            "explanation": "Erste Bank (Teil von Räuber)."
+            "explanation": "Teil des Kompositums 'Bankräuber'."
           },
           {
             "id": 12,
             "text": "##räuber",
-            "explanation": "Suffix."
+            "explanation": "Etabliert den kriminellen Kontext."
           },
           {
             "id": 13,
             "text": "ging",
-            "explanation": "Verb."
+            "explanation": "Bewegungsverb."
           },
           {
             "id": 14,
             "text": "zur",
-            "explanation": "Präposition."
+            "explanation": "Zielgerichtete Präposition."
           },
           {
             "id": 15,
             "text": "Bank",
-            "explanation": "Zweite Bank (Zielort)."
+            "explanation": "Ambivalentes Token 1 (Gebäude?)."
           },
           {
             "id": 16,
@@ -301,17 +298,17 @@
           {
             "id": 17,
             "text": "setzte",
-            "explanation": "Verb."
+            "explanation": "Handlungsverb."
           },
           {
             "id": 18,
             "text": "sich",
-            "explanation": "Pronomen."
+            "explanation": "Reflexivpronomen."
           },
           {
             "id": 19,
             "text": "auf",
-            "explanation": "Lokalpräposition."
+            "explanation": "Lokalpräposition (Sitzfläche)."
           },
           {
             "id": 20,
@@ -321,17 +318,17 @@
           {
             "id": 21,
             "text": "Bank",
-            "explanation": "Dritte Bank (Möbel)."
+            "explanation": "Ambivalentes Token 2 (Möbel?)."
           },
           {
             "id": 22,
             "text": "am",
-            "explanation": "Lokalpräposition."
+            "explanation": "Lokaladverb."
           },
           {
             "id": 23,
             "text": "Fluss",
-            "explanation": "Kontextueller Hinweis."
+            "explanation": "Natur-Anker."
           }
         ]
       },
@@ -344,7 +341,7 @@
               0.2
             ],
             "positional_vector": [
-              0.05,
+              0.1,
               0.0
             ]
           },
@@ -355,7 +352,7 @@
               0.2
             ],
             "positional_vector": [
-              0.4,
+              0.5,
               0.1
             ]
           },
@@ -376,37 +373,69 @@
         "attention_profiles": [
           {
             "id": "financial",
-            "label": "Kriminell/Finanz",
+            "label": "Finanz- & Kriminal-Fokus",
             "rules": [
               {
-                "source": 15,
-                "target": 11,
-                "strength": 0.95,
-                "explanation": "Verbindet Ort (Bank) mit Täter (Bankräuber)."
-              },
-              {
+                "head": 1,
                 "source": 15,
                 "target": 12,
-                "strength": 0.85,
-                "explanation": "Zieht Kontext aus der Handlung 'Räuber'."
+                "strength": 0.95,
+                "explanation": "H1 (Semantik): Koppelt 'Bank' an 'Räuber'. Fixiert Gebäude-Bedeutung."
+              },
+              {
+                "head": 2,
+                "source": 15,
+                "target": 14,
+                "strength": 0.80,
+                "explanation": "H2 (Syntax): Erkennt 'zur' als Richtungsangabe für Institutionen."
+              },
+              {
+                "head": 3,
+                "source": 15,
+                "target": 13,
+                "strength": 0.70,
+                "explanation": "H3 (Aktion): Verbindet das Gehen mit dem Zielort Bank."
+              },
+              {
+                "head": 4,
+                "source": 15,
+                "target": 10,
+                "strength": 0.40,
+                "explanation": "H4 (Struktur): Prüft den Satzanfang für Subjektbezug."
               }
             ]
           },
           {
             "id": "nature",
-            "label": "Natur/Erholung",
+            "label": "Natur- & Freizeit-Fokus",
             "rules": [
               {
+                "head": 1,
                 "source": 21,
                 "target": 23,
                 "strength": 0.98,
-                "explanation": "Eindeutige Zuordnung durch Ufernähe (Fluss)."
+                "explanation": "H1 (Umgebung): 'Fluss' definiert 'Bank' zweifelsfrei als Sitzmöbel."
               },
               {
+                "head": 2,
                 "source": 21,
                 "target": 19,
-                "strength": 0.75,
-                "explanation": "Präposition 'auf' deutet auf Sitzgelegenheit hin."
+                "strength": 0.90,
+                "explanation": "H2 (Physik): 'auf' verlangt eine physische Oberfläche (Sitzfläche)."
+              },
+              {
+                "head": 3,
+                "source": 21,
+                "target": 17,
+                "strength": 0.85,
+                "explanation": "H3 (Aktion): Das Verb 'setzte' aktiviert das Möbel-Schema."
+              },
+              {
+                "head": 4,
+                "source": 21,
+                "target": 20,
+                "strength": 0.50,
+                "explanation": "H4 (Struktur): Bindet den Artikel 'die' an das lokale Objekt."
               }
             ]
           }
@@ -418,20 +447,20 @@
             "ref_profile_id": "financial",
             "activations": [
               {
-                "label": "Wissenschaftlich",
-                "activation": 0.7
-              },
-              {
-                "label": "Sozial",
+                "label": "Finanzwesen",
                 "activation": 0.95
               },
               {
-                "label": "Poetisch",
-                "activation": 0.1
+                "label": "Kriminalität",
+                "activation": 0.88
               },
               {
-                "label": "Evolutionär",
-                "activation": 0.4
+                "label": "Architektur",
+                "activation": 0.30
+              },
+              {
+                "label": "Natur",
+                "activation": 0.02
               }
             ]
           },
@@ -439,20 +468,20 @@
             "ref_profile_id": "nature",
             "activations": [
               {
-                "label": "Wissenschaftlich",
-                "activation": 0.4
+                "label": "Finanzwesen",
+                "activation": 0.05
               },
               {
-                "label": "Sozial",
-                "activation": 0.6
+                "label": "Erholung",
+                "activation": 0.98
               },
               {
-                "label": "Poetisch",
-                "activation": 0.85
+                "label": "Möbeldesign",
+                "activation": 0.92
               },
               {
-                "label": "Evolutionär",
-                "activation": 0.5
+                "label": "Geographie",
+                "activation": 0.75
               }
             ]
           }
@@ -461,30 +490,40 @@
       "phase_4_decoding": {
         "outputs": [
           {
-            "label": "Tresorraum",
-            "logit": 6.4,
-            "type": "Sozial",
-            "hallucination_risk": 0.05
+            "label": "Geldinstitut",
+            "logit": 9.4,
+            "type": "Finanzwesen",
+            "hallucination_risk": 0.01,
+            "causality_trace": "Resultat für Bank (ID 15). Head 1 & 3 haben den Räuber- und Bewegungs-Kontext im Vektor konsolidiert."
           },
           {
-            "label": "Sitzbank",
-            "logit": 5.8,
-            "type": "Wissenschaftlich",
-            "hallucination_risk": 0.1
+            "label": "Sitzmöbel",
+            "logit": 9.1,
+            "type": "Möbeldesign",
+            "hallucination_risk": 0.01,
+            "causality_trace": "Resultat für Bank (ID 21). Head 1 (Fluss) und Head 2 (auf) haben die physikalische Bedeutung erzwungen."
           },
           {
-            "label": "Uferböschung",
-            "logit": 4.2,
-            "type": "Poetisch",
-            "hallucination_risk": 0.25
+            "label": "Flussufer",
+            "logit": 7.2,
+            "type": "Geographie",
+            "hallucination_risk": 0.10,
+            "causality_trace": "Assoziation durch das Natur-Profil, da Head 1 den Fluss als stärksten Key identifiziert hat."
+          },
+          {
+            "label": "Tresor",
+            "logit": 6.8,
+            "type": "Kriminalität",
+            "hallucination_risk": 0.05,
+            "causality_trace": "Logische Folgeaktivierung im FFN durch das 'Räuber'-Signal von Head 1."
           }
         ]
       },
       "phase_5_analysis": {
         "summary_points": [
-          "Attention löst die Polysemie live auf.",
-          "Wörter sammeln Kontext von ihren Nachbarn ein.",
-          "Ohne Attention wäre 'Bank' für die KI immer das gleiche Wort."
+          "Die Attention-Heads arbeiten wie Detektive: Jeder sucht nach unterschiedlichen Indizien im Satz.",
+          "Identische Wörter ('Bank') erhalten durch Head-Abgleiche völlig verschiedene mathematische Identitäten.",
+          "Polysemie wird nicht durch Raten, sondern durch präzise Vektor-Interaktionen mit Kontext-Partnern aufgelöst."
         ]
       }
     },
