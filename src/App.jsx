@@ -10,7 +10,7 @@ import InternalHeader from './components/InternalHeader';
 import GlossaryModal from './components/GlossaryModal';
 import InfoModal from './components/InfoModal';
 import IntroScreen from './components/IntroScreen';
-import PhaseBriefing from './components/PhaseBriefing'; // NEU: Import der Briefing-Komponente
+import PhaseBriefing from './components/PhaseBriefing'; 
 
 // Phasen-Importe
 import Phase0_Tokenization from './components/phases/Phase0_Tokenization';
@@ -31,23 +31,26 @@ function AppContent() {
   const [hoveredItem, setHoveredItem] = useState(null);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
 
-  // NEU: States für das Onboarding-System
+  // States für das Onboarding-System
   const [showBriefing, setShowBriefing] = useState(false);
   const [briefings, setBriefings] = useState({});
+
+  // State für die automatische Anzeige (Initialisierung aus LocalStorage)
+  const [autoShowBriefing, setAutoShowBriefing] = useState(() => {
+    const saved = localStorage.getItem('llm_explorer_auto_briefing');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
 
   const { scenarios, activeScenario, handleScenarioChange } = useScenarios();
   const simulator = useLLMSimulator(activeScenario);
 
-  // Bestands-Daten laden (Glossar)
+  // Daten laden
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}data/glossary.json`)
       .then(res => res.json())
       .then(data => setGlossaryData(data))
       .catch(err => console.error("Glossar-Ladefehler:", err));
-  }, []);
-
-  // NEU: Briefing-Inhalte laden
-  useEffect(() => {
+    
     fetch(`${import.meta.env.BASE_URL}data/phaseBriefings.json`)
       .then(res => res.json())
       .then(data => setBriefings(data))
@@ -57,19 +60,22 @@ function AppContent() {
   // Automatischer Scroll nach oben bei Phasenwechsel
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-
     const mainElement = document.querySelector('main');
-    if (mainElement) {
-      mainElement.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    if (mainElement) mainElement.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activePhase]);
 
-  // NEU: Briefing automatisch bei jeder neuen Phase einblenden
+  // Briefing automatisch einblenden, wenn autoShowBriefing true ist
   useEffect(() => {
-    if (activePhase >= 0) {
+    if (activePhase >= 0 && autoShowBriefing) {
       setShowBriefing(true);
     }
-  }, [activePhase]);
+  }, [activePhase, autoShowBriefing]);
+
+  // Handler für das Umschalten der Auto-Anzeige
+  const toggleAutoShowBriefing = (value) => {
+    setAutoShowBriefing(value);
+    localStorage.setItem('llm_explorer_auto_briefing', JSON.stringify(value));
+  };
 
   // Inspektor bei Phasenwechsel leeren
   useEffect(() => {
@@ -83,8 +89,21 @@ function AppContent() {
   }
 
   return (
-    <div className={`min-h-screen lg:h-screen flex flex-col transition-colors duration-700 ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
-      } font-sans`}>
+    <div className={`min-h-screen lg:h-screen flex flex-col transition-colors duration-700 ${
+      theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+    } font-sans`}>
+
+      {/* NEU: GLOBALER BRIEFING-DIALOG
+          Hier platziert, damit er absolut JEDES andere Element überlagert. */}
+      {showBriefing && briefings[activePhase] && (
+        <PhaseBriefing
+          data={briefings[activePhase]}
+          onClose={() => setShowBriefing(false)}
+          theme={theme}
+          autoShow={autoShowBriefing}
+          onToggleAutoShow={toggleAutoShowBriefing}
+        />
+      )}
 
       <InternalHeader
         theme={theme}
@@ -116,30 +135,28 @@ function AppContent() {
         </main>
       ) : (
         <>
-          <PhaseNavigator activePhase={activePhase} setActivePhase={setActivePhase} activeScenario={activeScenario} theme={theme} onOpenBriefing={() => setShowBriefing(true)} />
+          <PhaseNavigator 
+            activePhase={activePhase} 
+            setActivePhase={setActivePhase} 
+            activeScenario={activeScenario} 
+            theme={theme} 
+            onOpenBriefing={() => setShowBriefing(true)} 
+          />
 
           <main className="flex-1 flex flex-col items-center pt-4 pb-4 px-4 overflow-y-auto lg:overflow-hidden min-h-0">
             <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-4 h-auto lg:h-full min-h-0">
 
               {/* LINKES PANEL */}
-              <div className={`w-full lg:flex-1 relative border rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md transition-all duration-500 flex flex-col min-h-[500px] lg:min-h-0 ${theme === 'dark' ? 'bg-slate-900/40 border-slate-800' : 'bg-white/80 border-slate-200'
-                }`}>
-
-                {/* NEU: Das Briefing-Overlay innerhalb des relativen Panel-Containers */}
-                {showBriefing && briefings[activePhase] && (
-                  <PhaseBriefing
-                    data={briefings[activePhase]}
-                    onClose={() => setShowBriefing(false)}
-                    theme={theme}
-                  />
-                )}
+              <div className={`w-full lg:flex-1 relative border rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md transition-all duration-500 flex flex-col min-h-[500px] lg:min-h-0 ${
+                theme === 'dark' ? 'bg-slate-900/40 border-slate-800' : 'bg-white/80 border-slate-200'
+              }`}>
 
                 {(!activeScenario || !simulator) ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
                   </div>
                 ) : (
-                  <div key={activeScenario.id} className="flex-1 flex flex-col min-h-0 p-4 lg:p-6 lg:overflow-y-auto custom-scrollbar">
+                  <div key={activeScenario.id} className="flex-1 flex flex-col min-h-0">
                     {activePhase === 0 && <Phase0_Tokenization simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
                     {activePhase === 1 && <Phase1_Embedding simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
                     {activePhase === 2 && <Phase2_Attention simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
