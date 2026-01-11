@@ -257,7 +257,7 @@
       "id": "bank-polysemie",
       "name": "2. Polysemie: Das Bank-Rätsel",
       "input_prompt": "Der Bankräuber ging zur Bank und setzte sich auf die Bank am Fluss.",
-      "explanation": "Dieses Szenario zeigt die Polysemie-Auflösung. Dasselbe Wort ('Bank') erhält durch unterschiedliche Kontext-Partner völlig andere mathematische Repräsentationen.",
+      "explanation": "Dieses Szenario zeigt die Polysemie-Auflösung. Jedes Wort im Satz 'saugt' aktiv Informationen auf, um Mehrdeutigkeiten mathematisch zu eliminieren.",
       "phase_0_tokenization": {
         "tokens": [
           {
@@ -335,7 +335,18 @@
       "phase_1_embedding": {
         "token_vectors": [
           {
-            "token_index": 1,
+            "token_index": 10,
+            "base_vector": [
+              0.1,
+              0.9
+            ],
+            "positional_vector": [
+              0.01,
+              0.05
+            ]
+          },
+          {
+            "token_index": 11,
             "base_vector": [
               0.8,
               0.2
@@ -346,7 +357,40 @@
             ]
           },
           {
-            "token_index": 5,
+            "token_index": 12,
+            "base_vector": [
+              0.9,
+              0.1
+            ],
+            "positional_vector": [
+              0.15,
+              0.1
+            ]
+          },
+          {
+            "token_index": 13,
+            "base_vector": [
+              0.4,
+              0.6
+            ],
+            "positional_vector": [
+              0.2,
+              0.15
+            ]
+          },
+          {
+            "token_index": 14,
+            "base_vector": [
+              0.2,
+              0.8
+            ],
+            "positional_vector": [
+              0.25,
+              0.2
+            ]
+          },
+          {
+            "token_index": 15,
             "base_vector": [
               0.8,
               0.2
@@ -357,7 +401,62 @@
             ]
           },
           {
-            "token_index": 11,
+            "token_index": 16,
+            "base_vector": [
+              0.05,
+              0.05
+            ],
+            "positional_vector": [
+              0.3,
+              0.3
+            ]
+          },
+          {
+            "token_index": 17,
+            "base_vector": [
+              0.4,
+              0.6
+            ],
+            "positional_vector": [
+              0.4,
+              0.35
+            ]
+          },
+          {
+            "token_index": 18,
+            "base_vector": [
+              0.3,
+              0.7
+            ],
+            "positional_vector": [
+              0.45,
+              0.4
+            ]
+          },
+          {
+            "token_index": 19,
+            "base_vector": [
+              0.2,
+              0.8
+            ],
+            "positional_vector": [
+              0.5,
+              0.45
+            ]
+          },
+          {
+            "token_index": 20,
+            "base_vector": [
+              0.1,
+              0.9
+            ],
+            "positional_vector": [
+              0.55,
+              0.5
+            ]
+          },
+          {
+            "token_index": 21,
             "base_vector": [
               0.8,
               0.2
@@ -365,6 +464,28 @@
             "positional_vector": [
               0.9,
               0.3
+            ]
+          },
+          {
+            "token_index": 22,
+            "base_vector": [
+              0.2,
+              0.8
+            ],
+            "positional_vector": [
+              0.65,
+              0.6
+            ]
+          },
+          {
+            "token_index": 23,
+            "base_vector": [
+              0.7,
+              0.3
+            ],
+            "positional_vector": [
+              0.7,
+              0.65
             ]
           }
         ]
@@ -377,31 +498,66 @@
             "rules": [
               {
                 "head": 1,
+                "source": 11,
+                "target": 12,
+                "strength": 0.90,
+                "explanation": "H1 erkennt die semantische Einheit von 'Bank' und 'räuber'."
+              },
+              {
+                "head": 3,
+                "source": 12,
+                "target": 13,
+                "strength": 0.80,
+                "explanation": "H3 koppelt den Räuber als handelndes Subjekt an das Verb 'ging'."
+              },
+              {
+                "head": 1,
+                "source": 13,
+                "target": 12,
+                "strength": 0.75,
+                "explanation": "H1 sucht das Subjekt der Bewegung: Den Räuber."
+              },
+              {
+                "head": 3,
+                "source": 13,
+                "target": 15,
+                "strength": 0.85,
+                "explanation": "H3 verbindet die Bewegung 'ging' mit dem Zielort 'Bank' (15)."
+              },
+              {
+                "head": 2,
+                "source": 14,
+                "target": 15,
+                "strength": 0.95,
+                "explanation": "H2: Die Präposition 'zur' sucht ihr Zielobjekt -> 'Bank' (15)."
+              },
+              {
+                "head": 1,
                 "source": 15,
                 "target": 12,
                 "strength": 0.95,
-                "explanation": "H1 (Semantik): Koppelt 'Bank' an 'Räuber'. Fixiert Gebäude-Bedeutung."
+                "explanation": "H1 (Semantik): Wer einen 'Räuber' im Satz hat, meint mit 'Bank' ein Geldinstitut."
               },
               {
                 "head": 2,
                 "source": 15,
                 "target": 14,
                 "strength": 0.80,
-                "explanation": "H2 (Syntax): Erkennt 'zur' als Richtungsangabe für Institutionen."
-              },
-              {
-                "head": 3,
-                "source": 15,
-                "target": 13,
-                "strength": 0.70,
-                "explanation": "H3 (Aktion): Verbindet das Gehen mit dem Zielort Bank."
+                "explanation": "H2 erkennt 'zur' als Richtungsmarkierung für das Gebäude."
               },
               {
                 "head": 4,
-                "source": 15,
-                "target": 10,
-                "strength": 0.40,
-                "explanation": "H4 (Struktur): Prüft den Satzanfang für Subjektbezug."
+                "source": 18,
+                "target": 12,
+                "strength": 0.88,
+                "explanation": "H4: 'sich' sucht die Person, die handelt -> den 'Räuber'."
+              },
+              {
+                "head": 2,
+                "source": 19,
+                "target": 21,
+                "strength": 0.50,
+                "explanation": "H2 (Syntax): 'auf' verweist auf das Objekt Bank (21)."
               }
             ]
           },
@@ -410,32 +566,53 @@
             "label": "Natur- & Freizeit-Fokus",
             "rules": [
               {
+                "head": 3,
+                "source": 17,
+                "target": 21,
+                "strength": 0.92,
+                "explanation": "H3 (Aktion): Das Verb 'setzte' aktiviert das Möbel-Schema der 'Bank'."
+              },
+              {
+                "head": 4,
+                "source": 18,
+                "target": 12,
+                "strength": 0.95,
+                "explanation": "H4: 'sich' sucht die Person, die sich setzt -> den 'Räuber'."
+              },
+              {
+                "head": 2,
+                "source": 19,
+                "target": 21,
+                "strength": 0.92,
+                "explanation": "H2: 'auf' sucht das physische Objekt -> 'Bank' (21)."
+              },
+              {
                 "head": 1,
                 "source": 21,
                 "target": 23,
                 "strength": 0.98,
-                "explanation": "H1 (Umgebung): 'Fluss' definiert 'Bank' zweifelsfrei als Sitzmöbel."
+                "explanation": "H1 (Umgebung): 'Fluss' fixiert 'Bank' zweifelsfrei als Sitzmöbel."
               },
               {
                 "head": 2,
-                "source": 21,
-                "target": 19,
-                "strength": 0.90,
-                "explanation": "H2 (Physik): 'auf' verlangt eine physische Oberfläche (Sitzfläche)."
+                "source": 14,
+                "target": 15,
+                "strength": 0.60,
+                "explanation": "H2: Die Präposition 'zur' sucht ihr Zielobjekt -> 'Bank' (15)."
               },
               {
-                "head": 3,
-                "source": 21,
-                "target": 17,
+                "head": 1,
+                "source": 23,
+                "target": 21,
                 "strength": 0.85,
-                "explanation": "H3 (Aktion): Das Verb 'setzte' aktiviert das Möbel-Schema."
+                "explanation": "H1 koppelt den Fluss an das ufernahe Objekt (die Bank)."
               },
               {
-                "head": 4,
-                "source": 21,
-                "target": 20,
-                "strength": 0.50,
-                "explanation": "H4 (Struktur): Bindet den Artikel 'die' an das lokale Objekt."
+                "head": 2,
+                "source": 22,
+                "target": 23,
+                "strength": 0.90,
+                "explanation": "H2: Die Präposition 'am' sucht den geografischen Anker 'Fluss'."
               }
             ]
           }
@@ -453,14 +630,6 @@
               {
                 "label": "Kriminalität",
                 "activation": 0.88
-              },
-              {
-                "label": "Architektur",
-                "activation": 0.30
-              },
-              {
-                "label": "Natur",
-                "activation": 0.02
               }
             ]
           },
@@ -468,20 +637,12 @@
             "ref_profile_id": "nature",
             "activations": [
               {
-                "label": "Finanzwesen",
-                "activation": 0.05
-              },
-              {
                 "label": "Erholung",
                 "activation": 0.98
               },
               {
                 "label": "Möbeldesign",
                 "activation": 0.92
-              },
-              {
-                "label": "Geographie",
-                "activation": 0.75
               }
             ]
           }
@@ -492,38 +653,19 @@
           {
             "label": "Geldinstitut",
             "logit": 9.4,
-            "type": "Finanzwesen",
-            "hallucination_risk": 0.01,
-            "causality_trace": "Resultat für Bank (ID 15). Head 1 & 3 haben den Räuber- und Bewegungs-Kontext im Vektor konsolidiert."
+            "type": "Finanzwesen"
           },
           {
             "label": "Sitzmöbel",
             "logit": 9.1,
-            "type": "Möbeldesign",
-            "hallucination_risk": 0.01,
-            "causality_trace": "Resultat für Bank (ID 21). Head 1 (Fluss) und Head 2 (auf) haben die physikalische Bedeutung erzwungen."
-          },
-          {
-            "label": "Flussufer",
-            "logit": 7.2,
-            "type": "Geographie",
-            "hallucination_risk": 0.10,
-            "causality_trace": "Assoziation durch das Natur-Profil, da Head 1 den Fluss als stärksten Key identifiziert hat."
-          },
-          {
-            "label": "Tresor",
-            "logit": 6.8,
-            "type": "Kriminalität",
-            "hallucination_risk": 0.05,
-            "causality_trace": "Logische Folgeaktivierung im FFN durch das 'Räuber'-Signal von Head 1."
+            "type": "Möbeldesign"
           }
         ]
       },
       "phase_5_analysis": {
         "summary_points": [
-          "Die Attention-Heads arbeiten wie Detektive: Jeder sucht nach unterschiedlichen Indizien im Satz.",
-          "Identische Wörter ('Bank') erhalten durch Head-Abgleiche völlig verschiedene mathematische Identitäten.",
-          "Polysemie wird nicht durch Raten, sondern durch präzise Vektor-Interaktionen mit Kontext-Partnern aufgelöst."
+          "Attention-Heads arbeiten wie Detektive.",
+          "Identische Wörter erhalten mathematisch verschiedene Identitäten."
         ]
       }
     },
