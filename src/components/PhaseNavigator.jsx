@@ -13,20 +13,23 @@ const PhaseNavigator = ({ activePhase, setActivePhase, theme }) => {
   };
 
   const current = pipelineFlow[activePhase] || { in: "Debug", op: "Layout Testing", out: "UI Sync" };
-  const btnBaseClass = "px-4 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all whitespace-nowrap flex items-center justify-center font-bold";
+  
+  // Zentrale Klassen für die Buttons (analog zum Header)
+  const btnBase = "flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border transition-all duration-300 font-black uppercase tracking-widest text-[10px] shadow-sm";
+  const desktopBtnBase = "px-4 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all whitespace-nowrap flex items-center justify-center font-bold";
 
   const handleNext = () => { if (activePhase < 5) setActivePhase(activePhase + 1); };
   const handlePrev = () => { if (activePhase > 0) setActivePhase(activePhase - 1); };
 
   return (
     <>
-      {/* DESKTOP NAV: Komplett versteckt auf Mobile */}
+      {/* DESKTOP NAV: Unverändert */}
       <nav className="hidden lg:flex flex-col items-center bg-slate-900 border-b border-slate-800 p-3 gap-3 w-full shrink-0">
         <div className="flex justify-center items-center gap-2 w-full">
           <button
             disabled={activePhase === 0}
             onClick={handlePrev}
-            className={`${btnBaseClass} ${activePhase === 0 ? 'opacity-10 cursor-not-allowed' : 'text-slate-500 hover:text-white hover:bg-slate-800'}`}
+            className={`${desktopBtnBase} ${activePhase === 0 ? 'opacity-10 cursor-not-allowed' : 'text-slate-500 hover:text-white hover:bg-slate-800'}`}
           >
             ←
           </button>
@@ -36,7 +39,7 @@ const PhaseNavigator = ({ activePhase, setActivePhase, theme }) => {
               <button 
                 key={index}
                 onClick={() => setActivePhase(index)}
-                className={`${btnBaseClass} ${activePhase === index ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
+                className={`${desktopBtnBase} ${activePhase === index ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
               >
                 <span className="opacity-50 mr-1">{index}</span> {name}
               </button>
@@ -46,7 +49,7 @@ const PhaseNavigator = ({ activePhase, setActivePhase, theme }) => {
           <button
             disabled={activePhase === 5}
             onClick={handleNext}
-            className={`${btnBaseClass} ${activePhase === 5 ? 'opacity-10 cursor-not-allowed' : 'text-slate-500 hover:text-white hover:bg-slate-800'}`}
+            className={`${desktopBtnBase} ${activePhase === 5 ? 'opacity-10 cursor-not-allowed' : 'text-slate-500 hover:text-white hover:bg-slate-800'}`}
           >
             →
           </button>
@@ -63,8 +66,10 @@ const PhaseNavigator = ({ activePhase, setActivePhase, theme }) => {
         </div>
       </nav>
 
-      {/* MOBILE NAV: Fixiert am unteren Rand */}
+      {/* MOBILE NAV: Jetzt im dezenten Header-Stil */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[60] bg-slate-950/90 backdrop-blur-xl border-t border-white/10 p-4 pb-8 flex flex-col gap-4 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        
+        {/* MOBILE MONITOR */}
         <div className="flex items-center justify-between bg-white/5 rounded-2xl px-4 py-3 border border-white/5">
           <div className="flex flex-col gap-1">
             <span className="text-[7px] text-slate-500 uppercase tracking-widest font-black">Input</span>
@@ -86,24 +91,39 @@ const PhaseNavigator = ({ activePhase, setActivePhase, theme }) => {
           </div>
         </div>
 
+        {/* MOBILE CONTROLS: Dezent & Konsistent */}
         <div className="flex gap-3">
+          {/* Zurück Button (Neutral) */}
           <button 
             onClick={handlePrev}
             disabled={activePhase === 0}
-            className={`flex-1 flex items-center justify-center py-4 rounded-2xl border transition-all ${activePhase === 0 ? 'opacity-20 border-white/5 text-slate-600' : 'bg-slate-900 border-white/10 text-white active:scale-95'}`}
+            className={`flex-1 ${btnBase} ${
+              activePhase === 0 
+                ? 'opacity-10 border-transparent text-slate-600 cursor-not-allowed' 
+                : theme === 'dark'
+                  ? 'bg-white/5 border-white/5 text-slate-400 active:bg-white/10'
+                  : 'bg-slate-50 border-slate-200 text-slate-600 active:bg-slate-100'
+            }`}
           >
-            Zurück
+            <span className="text-xs">←</span> Zurück
           </button>
+
+          {/* Weiter Button (Blau-Akzent analog Wissens-DB) */}
           <button 
             onClick={handleNext}
             disabled={activePhase === 5}
-            className={`flex-[2] flex items-center justify-center py-4 rounded-2xl font-black uppercase tracking-widest transition-all ${activePhase === 5 ? 'bg-slate-800 text-slate-500' : 'bg-blue-600 text-white active:scale-95'}`}
+            className={`flex-[2] ${btnBase} ${
+              activePhase === 5
+                ? 'bg-slate-800/50 border-transparent text-slate-500'
+                : theme === 'dark'
+                  ? 'bg-blue-500/10 border-blue-500/20 text-blue-400 shadow-blue-900/20 active:bg-blue-500/20'
+                  : 'bg-blue-50 border-blue-200 text-blue-600 active:bg-blue-100 shadow-blue-100'
+            }`}
           >
             {activePhase === 5 ? 'Abschluss' : `Phase ${activePhase + 1} →`}
           </button>
         </div>
       </nav>
-      {/* Spacer wurde hier entfernt! */}
     </>
   );
 };
