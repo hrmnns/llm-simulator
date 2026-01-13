@@ -1042,7 +1042,7 @@
       }
     },
     {
-      "id": "winograd-trophaee-tasche-klein",
+      "id": "winograd-trophaee-tasche-klein2",
       "name": "Winograd-Schema: Pronomen-Auflösung durch Größenlogik (zu klein)",
       "input_prompt": "Die Trophäe passte nicht in die braune Tasche, weil sie zu klein war.",
       "explanation": "Dieses Szenario ist ein klassisches Winograd-ähnliches Rätsel: Das Pronomen \"sie\" kann sich grammatisch auf \"Trophäe\" oder \"Tasche\" beziehen (beides feminin). Der entscheidende Hinweis liegt in der Kausalität: Wenn etwas nicht hineinpasst, weil \"sie zu klein\" ist, dann ist der Container (die Tasche) zu klein, nicht das hineinzulegende Objekt. Das Szenario zeigt den Konflikt zwischen einer naiven Nähe-Heuristik und einer kontextuellen Fit-Logik.",
