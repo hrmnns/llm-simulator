@@ -1,6 +1,6 @@
 {
   "project": "LLM-Explorer",
-  "version": "3.2",
+  "version": "3.3",
   "scenarios": [
     {
       "id": "was-ist-ein-hund",
