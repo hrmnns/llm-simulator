@@ -332,158 +332,158 @@
           {
             "token_index": 10,
             "base_vector": [
-              0.05,
-              0.05
+              0.02,
+              0.60
             ],
             "positional_vector": [
               0.00,
               0.00
             ],
-            "information": "SOS ist semantisch neutral und dient als globaler Startanker. Sehr niedrige Semantik-Koordinaten, Position am Ursprung."
+            "information": "X (Struktur↔Welt): sehr niedrig, da <s> keine Weltentität bezeichnet. Y (Eigenständig↔Kontextabhängig): mittel-hoch, weil <s> als globaler Kontextanker nur im Zusammenspiel mit der Sequenz Sinn ergibt."
           },
           {
             "token_index": 11,
             "base_vector": [
-              0.15,
-              0.85
+              0.05,
+              0.88
             ],
             "positional_vector": [
               0.02,
               0.10
             ],
-            "information": "Artikel tragen vor allem syntaktische Information (hoch auf Syntax-Achse), wenig Objektsemantik. Früh im Satz => niedrige Positions-Y."
+            "information": "Artikel sind stark strukturgetrieben (X sehr niedrig) und ohne Bezugsnomen kaum eigenständig (Y hoch). Früh im Satz => niedrige Positions-Y."
           },
           {
             "token_index": 12,
             "base_vector": [
-              0.85,
-              0.25
+              0.92,
+              0.22
             ],
             "positional_vector": [
               0.04,
               0.18
             ],
-            "information": "\"Pokal\" als konkretes Objekt mit starker Objekt-Semantik. In Fit-Szenarien eher auf der 'Objekt'-Region (hoch X), nicht primär syntaktisch."
+            "information": "\"Pokal\" ist eine klare Weltentität (X sehr hoch) und relativ eigenständig interpretierbar (Y niedrig). Es ist ein Kandidat für Eigenschaftszuschreibung (\"zu groß\") im Fit-Frame."
           },
           {
             "token_index": 13,
             "base_vector": [
-              0.45,
-              0.55
+              0.55,
+              0.78
             ],
             "positional_vector": [
               0.06,
               0.26
             ],
-            "information": "\"passte\" liegt semantisch zwischen Ereignis/Relation (X mittel) und Syntax (Y mittel). Es triggert ein Fit-Frame (Objekt-in-Container)."
+            "information": "\"passte\" ist relational: Es beschreibt eine Beziehung zwischen Entitäten (X mittel), aber ohne Subjekt/Objekt bleibt es kontextabhängig (Y hoch)."
           },
           {
             "token_index": 14,
             "base_vector": [
               0.10,
-              0.60
+              0.82
             ],
             "positional_vector": [
               0.08,
               0.34
             ],
-            "information": "Negation ist semantisch leicht, aber stark steuernd für Interpretation (moderat syntaktisch/operational). Position weiter hinten => höheres Positions-Y."
+            "information": "Negation ist ein struktureller Operator (X sehr niedrig) und stark vom Ereigniskontext abhängig (Y hoch): \"nicht\" braucht ein Ziel (was wird negiert?)."
           },
           {
             "token_index": 15,
             "base_vector": [
-              0.20,
-              0.80
+              0.08,
+              0.86
             ],
             "positional_vector": [
               0.10,
               0.42
             ],
-            "information": "Präposition ist primär Struktur/Syntax (hoch zweite Komponente). Sie öffnet eine Relation und sucht ein Ziel (Container)."
+            "information": "Präpositionen sind Strukturmarker (X sehr niedrig) und ohne ihr Objekt unvollständig (Y hoch). \"in\" öffnet die Container-Relation, entscheidet aber noch nichts."
           },
           {
             "token_index": 16,
             "base_vector": [
-              0.15,
-              0.85
+              0.05,
+              0.90
             ],
             "positional_vector": [
               0.12,
               0.50
             ],
-            "information": "Akkusativ-Artikel ist ein starker syntaktischer Marker, der den Container-Kandidaten ankündigt (Koffer)."
+            "information": "Akkusativ-Artikel ist maximal strukturgetrieben (X sehr niedrig) und stark kontextabhängig (Y sehr hoch): Er kündigt ein Bezugsnomen an, trägt aber keine Weltentität."
           },
           {
             "token_index": 17,
             "base_vector": [
-              0.75,
-              0.30
+              0.88,
+              0.26
             ],
             "positional_vector": [
               0.14,
               0.58
             ],
-            "information": "\"Koffer\" ist semantisch ebenfalls ein Objekt, aber typischer Container. Nahe an \"Pokal\" (beide physisch), jedoch leicht anders (Container-Schema)."
+            "information": "\"Koffer\" ist ebenfalls eine Weltentität (X hoch) und relativ eigenständig (Y niedrig). Nahe bei \"Pokal\" (beide physisch), aber mit Container-Schema (in Phase 2 relevant)."
           },
           {
             "token_index": 18,
             "base_vector": [
-              0.25,
-              0.90
+              0.06,
+              0.94
             ],
             "positional_vector": [
               0.16,
               0.66
             ],
-            "information": "\"weil\" ist starker Diskurs-/Strukturanker (hoch Syntax/Relation). Es koppelt Hauptsatz und Begründung."
+            "information": "\"weil\" ist ein reiner Diskurs-/Strukturmarker (X extrem niedrig) und maximal kontextabhängig (Y extrem hoch): Es verknüpft Sachverhalte, hat aber keine Weltreferenz."
           },
           {
             "token_index": 19,
             "base_vector": [
-              0.30,
-              0.70
+              0.18,
+              0.90
             ],
             "positional_vector": [
               0.18,
               0.74
             ],
-            "information": "Pronomen ist semantisch unterbestimmt (X mittel), aber strukturell relevant (Y relativ hoch). Gleicher base_vector bleibt stabil, Referenz entsteht erst durch Attention."
+            "information": "Pronomen sind semantisch unterbestimmt (X niedrig-mittel) und stark kontextabhängig (Y sehr hoch): Die Referenz entsteht erst durch Attention, nicht durch den Basisvektor."
           },
           {
             "token_index": 20,
             "base_vector": [
-              0.20,
-              0.75
+              0.10,
+              0.88
             ],
             "positional_vector": [
               0.20,
               0.82
             ],
-            "information": "\"zu\" wirkt als Grad-Modifikator: semantisch leicht, syntaktisch/kompositionell wichtig, da es die Schwelle 'passt' -> 'passt nicht wegen Überschreitung' aktiviert."
+            "information": "\"zu\" ist kompositionell/strukturell (X sehr niedrig) und stark kontextabhängig (Y sehr hoch): Es braucht ein Adjektiv und aktiviert eine Überschreitungslogik (zu + Eigenschaft)."
           },
           {
             "token_index": 21,
             "base_vector": [
-              0.70,
-              0.35
+              0.78,
+              0.48
             ],
             "positional_vector": [
               0.22,
               0.90
             ],
-            "information": "\"groß\" liegt nahe bei physischen Eigenschaftsachsen. Es steht semantisch näher bei Objekten (Pokal/Koffer) als bei Funktionswörtern."
+            "information": "\"groß\" ist weltbezogen (X hoch), aber als Eigenschaft weniger eigenständig als ein Nomen (Y mittel): Es braucht typischerweise einen Träger (Pokal oder Koffer), der erst später gebunden wird."
           },
           {
             "token_index": 22,
             "base_vector": [
-              0.35,
-              0.60
+              0.48,
+              0.82
             ],
             "positional_vector": [
               0.24,
               0.98
             ],
-            "information": "Kopulaverb verbindet Referenzträger (Pronomen) mit Eigenschaft (groß). Semantisch relational, positionsbedingt am Satzende => höchstes Positions-Y."
+            "information": "Kopulaverb ist relational (X mittel) und stark kontextabhängig (Y hoch): \"war\" verbindet Subjekt (Pronomen) und Prädikativ (groß). Satzende => höchstes Positions-Y."
           }
         ]
       },
