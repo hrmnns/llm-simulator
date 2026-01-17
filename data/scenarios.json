@@ -3,6 +3,319 @@
   "version": "3.37",
   "scenarios": [
     {
+      "id": "polysemie-schloss-labor",
+      "name": "Mehrdeutigkeit: Das Schloss",
+      "input_prompt": "Das Schloss war für den Einbrecher kein Hindernis.",
+      "explanation": "Dieses Szenario demonstriert, wie die Attention-Heads entscheiden, welche Bedeutung ein mehrdeutiges Wort (Schloss) annimmt. Je nachdem, ob die KI auf 'Einbrecher' oder 'Hindernis' achtet, ändert sich das Weltwissen.",
+      "phase_0_tokenization": {
+        "tokens": [
+          {
+            "id": "1",
+            "text": "Das",
+            "explanation": "Artikel (Neutral)"
+          },
+          {
+            "id": "2",
+            "text": "Schloss",
+            "explanation": "Mehrdeutiges Nomen (Query-Token)"
+          },
+          {
+            "id": "3",
+            "text": "war",
+            "explanation": "Kopula-Verb"
+          },
+          {
+            "id": "4",
+            "text": "für",
+            "explanation": "Präposition"
+          },
+          {
+            "id": "5",
+            "text": "den",
+            "explanation": "Artikel"
+          },
+          {
+            "id": "6",
+            "text": "Einbrecher",
+            "explanation": "Kontext-Geber (Funktional)"
+          },
+          {
+            "id": "7",
+            "text": "kein",
+            "explanation": "Negations-Artikel"
+          },
+          {
+            "id": "8",
+            "text": "Hindernis",
+            "explanation": "Kontext-Geber (Abstrakt)"
+          },
+          {
+            "id": "9",
+            "text": ".",
+            "explanation": "Satzende"
+          }
+        ]
+      },
+      "phase_1_embedding": {
+        "token_vectors": [
+          {
+            "token_index": 0,
+            "base_vector": [
+              0.1,
+              0.1
+            ],
+            "positional_vector": [
+              0.0,
+              0.1
+            ]
+          },
+          {
+            "token_index": 1,
+            "base_vector": [
+              0.5,
+              0.5
+            ],
+            "positional_vector": [
+              0.1,
+              0.1
+            ]
+          },
+          {
+            "token_index": 2,
+            "base_vector": [
+              0.2,
+              0.2
+            ],
+            "positional_vector": [
+              0.2,
+              0.1
+            ]
+          },
+          {
+            "token_index": 3,
+            "base_vector": [
+              0.1,
+              0.1
+            ],
+            "positional_vector": [
+              0.3,
+              0.1
+            ]
+          },
+          {
+            "token_index": 4,
+            "base_vector": [
+              0.1,
+              0.1
+            ],
+            "positional_vector": [
+              0.4,
+              0.1
+            ]
+          },
+          {
+            "token_index": 5,
+            "base_vector": [
+              0.8,
+              0.7
+            ],
+            "positional_vector": [
+              0.5,
+              0.1
+            ]
+          },
+          {
+            "token_index": 6,
+            "base_vector": [
+              0.1,
+              0.3
+            ],
+            "positional_vector": [
+              0.6,
+              0.1
+            ]
+          },
+          {
+            "token_index": 7,
+            "base_vector": [
+              0.7,
+              0.8
+            ],
+            "positional_vector": [
+              0.7,
+              0.1
+            ]
+          },
+          {
+            "token_index": 8,
+            "base_vector": [
+              0.1,
+              0.1
+            ],
+            "positional_vector": [
+              0.8,
+              0.1
+            ]
+          }
+        ]
+      },
+      "phase_2_attention": {
+        "attention_profiles": [
+          {
+            "id": "scientific",
+            "label": "Kontextuelle Logik (Einbrecher)",
+            "rules": [
+              {
+                "head": 1,
+                "source": "2",
+                "target": "6",
+                "strength": 0.95,
+                "explanation": "Semantik: Starke Kopplung zwischen 'Schloss' und 'Einbrecher' (Sicherheitsebene)."
+              },
+              {
+                "head": 1,
+                "source": "2",
+                "target": "8",
+                "strength": 0.40,
+                "explanation": "Semantik: Schwacher Bezug zum abstrakten Hindernis."
+              },
+              {
+                "head": 2,
+                "source": "2",
+                "target": "1",
+                "strength": 0.80,
+                "explanation": "Syntax: Grammatische Bindung an den vorangestellten Artikel."
+              },
+              {
+                "head": 3,
+                "source": "2",
+                "target": "6",
+                "strength": 0.90,
+                "explanation": "Logik: Einbrecher interagieren funktional mit Türschlössern."
+              },
+              {
+                "head": 4,
+                "source": "2",
+                "target": "8",
+                "strength": 0.70,
+                "explanation": "Struktur: Lokale Nähe zum Prädikatswort."
+              }
+            ]
+          },
+          {
+            "id": "emotional",
+            "label": "Oberflächliche Assoziation (Gebäude)",
+            "rules": [
+              {
+                "head": 1,
+                "source": "2",
+                "target": "1",
+                "strength": 0.90,
+                "explanation": "Semantik: Fixierung auf das Wort 'Schloss' als isoliertes Monument."
+              },
+              {
+                "head": 2,
+                "source": "2",
+                "target": "3",
+                "strength": 0.85,
+                "explanation": "Syntax: Verbindung zum Verb am Satzanfang."
+              },
+              {
+                "head": 3,
+                "source": "2",
+                "target": "8",
+                "strength": 0.40,
+                "explanation": "Logik: Vernachlässigung der Einbrecher-Komponente."
+              },
+              {
+                "head": 4,
+                "source": "2",
+                "target": "2",
+                "strength": 0.99,
+                "explanation": "Struktur: Starke Self-Attention (Wort bleibt bei sich selbst)."
+              }
+            ]
+          }
+        ]
+      },
+      "phase_3_ffn": {
+        "activation_profiles": [
+          {
+            "ref_profile_id": "scientific",
+            "activations": [
+              {
+                "label": "Wissenschaftlich",
+                "activation": 0.20,
+                "color": "#3b82f6"
+              },
+              {
+                "label": "Funktional",
+                "activation": 0.60,
+                "color": "#10b981"
+              },
+              {
+                "label": "Sozial",
+                "activation": 0.40,
+                "color": "#f472b6"
+              },
+              {
+                "label": "Evolutionär",
+                "activation": 0.10,
+                "color": "#f59e0b"
+              }
+            ]
+          },
+          {
+            "ref_profile_id": "emotional",
+            "activations": [
+              {
+                "label": "Wissenschaftlich",
+                "activation": 0.80,
+                "color": "#3b82f6"
+              },
+              {
+                "label": "Funktional",
+                "activation": 0.10,
+                "color": "#10b981"
+              },
+              {
+                "label": "Sozial",
+                "activation": 0.20,
+                "color": "#f472b6"
+              },
+              {
+                "label": "Evolutionär",
+                "activation": 0.05,
+                "color": "#f59e0b"
+              }
+            ]
+          }
+        ]
+      },
+      "phase_4_decoding": {
+        "outputs": [
+          {
+            "label": "Türschloss",
+            "logit": 9.4,
+            "type": "Funktional",
+            "causality_trace": "Head 3 (Logik) hat die funktionale Verbindung zum 'Einbrecher' priorisiert."
+          },
+          {
+            "label": "Prachtbau",
+            "logit": 2.1,
+            "type": "Wissenschaftlich",
+            "causality_trace": "Logisch abgewertet, da Einbrecher selten Gebäude als Ganzes 'überwinden'."
+          },
+          {
+            "label": "Riegel",
+            "logit": 4.5,
+            "type": "Funktional",
+            "causality_trace": "Semantisch verwandte Alternative im Sicherheitskontext."
+          }
+        ]
+      }
+    },
+    {
       "id": "counting-reasoning_GEM",
       "name": "Logik: Die Zahlenreihe",
       "input_prompt": "Eins, zwei, drei, vier,",
@@ -584,106 +897,426 @@
         "summary_points": []
       }
     },
-{
-  "id": "winograd-final-2026",
-  "name": "Winograd: Trophäe vs. Tasche",
-  "input_prompt": "Die Trophäe passt nicht in die Tasche, weil sie zu klein ist.",
-  "explanation": "Ein logisches Rätsel: Die Aufmerksamkeit entscheidet, ob 'sie' die Trophäe oder die Tasche ist.",
-  "phase_0_tokenization": {
-    "tokens": [
-      { "id": 1, "text": "Die", "explanation": "Artikel" },
-      { "id": 2, "text": "Trophäe", "explanation": "Objekt A (Inhalt)" },
-      { "id": 3, "text": "passt", "explanation": "Verb" },
-      { "id": 4, "text": "nicht", "explanation": "Negation" },
-      { "id": 5, "text": "in", "explanation": "Präposition" },
-      { "id": 6, "text": "die", "explanation": "Artikel" },
-      { "id": 7, "text": "Tasche", "explanation": "Objekt B (Behälter)" },
-      { "id": 8, "text": ",", "explanation": "Satzbau" },
-      { "id": 9, "text": "weil", "explanation": "Konnektor" },
-      { "id": 10, "text": "sie", "explanation": "Pronomen (Fokus)" },
-      { "id": 11, "text": "zu", "explanation": "Adverb" },
-      { "id": 12, "text": "klein", "explanation": "Eigenschaft" },
-      { "id": 13, "text": "ist", "explanation": "Verb" }
-    ]
-  },
-  "phase_1_embedding": {
-    "token_vectors": [
-      { "token_index": 0, "base_vector": [0.1, 0.1], "positional_vector": [0.0, 0.0] },
-      { "token_index": 1, "base_vector": [0.8, 0.4], "positional_vector": [0.1, 0.0] },
-      { "token_index": 2, "base_vector": [0.3, 0.5], "positional_vector": [0.2, 0.0] },
-      { "token_index": 3, "base_vector": [0.1, 0.1], "positional_vector": [0.3, 0.0] },
-      { "token_index": 4, "base_vector": [0.1, 0.1], "positional_vector": [0.4, 0.0] },
-      { "token_index": 5, "base_vector": [0.2, 0.1], "positional_vector": [0.5, 0.0] },
-      { "token_index": 6, "base_vector": [0.7, 0.4], "positional_vector": [0.6, 0.0] },
-      { "token_index": 7, "base_vector": [0.1, 0.1], "positional_vector": [0.7, 0.0] },
-      { "token_index": 8, "base_vector": [0.5, 0.5], "positional_vector": [0.8, 0.0] },
-      { "token_index": 9, "base_vector": [0.1, 0.1], "positional_vector": [0.9, 0.0] },
-      { "token_index": 10, "base_vector": [0.1, 0.1], "positional_vector": [1.0, 0.0] },
-      { "token_index": 11, "base_vector": [0.9, 0.2], "positional_vector": [1.1, 0.0] },
-      { "token_index": 12, "base_vector": [0.1, 0.1], "positional_vector": [1.2, 0.0] }
-    ]
-  },
-  "phase_2_attention": {
-    "attention_profiles": [
-      {
-        "id": "scientific",
-        "label": "Logik-Modus (Korrekt)",
-        "rules": [
-          { "head": 1, "source": 10, "target": 7, "strength": 0.90, "explanation": "Semantik: Fokus auf Behälter." },
-          { "head": 1, "source": 10, "target": 2, "strength": 0.40, "explanation": "Semantik: Alternative Referenz." },
-          { "head": 2, "source": 10, "target": 6, "strength": 0.95, "explanation": "Syntax: Genus-Match (die Tasche)." },
-          { "head": 2, "source": 10, "target": 1, "strength": 0.60, "explanation": "Syntax: Genus-Match (Die Trophäe)." },
-          { "head": 3, "source": 10, "target": 12, "strength": 0.98, "explanation": "Logik: 'sie' ist 'klein'." },
-          { "head": 3, "source": 12, "target": 7, "strength": 0.85, "explanation": "Logik: Schlussfolgerung auf Tasche." },
-          { "head": 4, "source": 10, "target": 7, "strength": 0.70, "explanation": "Struktur: Lokaler Bezug." },
-          { "head": 4, "source": 10, "target": 9, "strength": 0.50, "explanation": "Struktur: Kausal-Check." }
+    {
+      "id": "winograd-final-2026",
+      "name": "Winograd: Trophäe vs. Tasche",
+      "input_prompt": "Die Trophäe passt nicht in die Tasche, weil sie zu klein ist.",
+      "explanation": "Ein logisches Rätsel: Die Aufmerksamkeit entscheidet, ob 'sie' die Trophäe oder die Tasche ist.",
+      "phase_0_tokenization": {
+        "tokens": [
+          {
+            "id": 1,
+            "text": "Die",
+            "explanation": "Artikel"
+          },
+          {
+            "id": 2,
+            "text": "Trophäe",
+            "explanation": "Objekt A (Inhalt)"
+          },
+          {
+            "id": 3,
+            "text": "passt",
+            "explanation": "Verb"
+          },
+          {
+            "id": 4,
+            "text": "nicht",
+            "explanation": "Negation"
+          },
+          {
+            "id": 5,
+            "text": "in",
+            "explanation": "Präposition"
+          },
+          {
+            "id": 6,
+            "text": "die",
+            "explanation": "Artikel"
+          },
+          {
+            "id": 7,
+            "text": "Tasche",
+            "explanation": "Objekt B (Behälter)"
+          },
+          {
+            "id": 8,
+            "text": ",",
+            "explanation": "Satzbau"
+          },
+          {
+            "id": 9,
+            "text": "weil",
+            "explanation": "Konnektor"
+          },
+          {
+            "id": 10,
+            "text": "sie",
+            "explanation": "Pronomen (Fokus)"
+          },
+          {
+            "id": 11,
+            "text": "zu",
+            "explanation": "Adverb"
+          },
+          {
+            "id": 12,
+            "text": "klein",
+            "explanation": "Eigenschaft"
+          },
+          {
+            "id": 13,
+            "text": "ist",
+            "explanation": "Verb"
+          }
         ]
       },
-      {
-        "id": "emotional",
-        "label": "Objekt-Modus (Fehlerhaft)",
-        "rules": [
-          { "head": 1, "source": 10, "target": 2, "strength": 0.95, "explanation": "Semantik: Fokus auf Trophäe." },
-          { "head": 1, "source": 10, "target": 7, "strength": 0.10, "explanation": "Semantik: Ignoriert Tasche." },
-          { "head": 2, "source": 10, "target": 1, "strength": 0.90, "explanation": "Syntax: Fokus auf Satzanfang." },
-          { "head": 2, "source": 10, "target": 6, "strength": 0.30, "explanation": "Syntax: Vernachlässigt Objekt B." },
-          { "head": 3, "source": 10, "target": 2, "strength": 0.85, "explanation": "Logik: Trophäe wird als 'klein' markiert." },
-          { "head": 3, "source": 10, "target": 12, "strength": 0.40, "explanation": "Logik: Ungeprüfte Eigenschaft." },
-          { "head": 4, "source": 10, "target": 2, "strength": 0.80, "explanation": "Struktur: Fokus auf Subjekt." },
-          { "head": 4, "source": 10, "target": 3, "strength": 0.30, "explanation": "Struktur: Verb-Bezug." }
-        ]
-      }
-    ]
-  },
-  "phase_3_ffn": {
-    "activation_profiles": [
-      {
-        "ref_profile_id": "scientific",
-        "activations": [
-          { "label": "Wissenschaftlich", "activation": 0.20, "color": "#3b82f6" },
-          { "label": "Funktional", "activation": 0.98, "color": "#10b981" },
-          { "label": "Sozial", "activation": 0.05, "color": "#f472b6" },
-          { "label": "Evolutionär", "activation": 0.05, "color": "#f59e0b" }
+      "phase_1_embedding": {
+        "token_vectors": [
+          {
+            "token_index": 0,
+            "base_vector": [
+              0.1,
+              0.1
+            ],
+            "positional_vector": [
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "token_index": 1,
+            "base_vector": [
+              0.8,
+              0.4
+            ],
+            "positional_vector": [
+              0.1,
+              0.0
+            ]
+          },
+          {
+            "token_index": 2,
+            "base_vector": [
+              0.3,
+              0.5
+            ],
+            "positional_vector": [
+              0.2,
+              0.0
+            ]
+          },
+          {
+            "token_index": 3,
+            "base_vector": [
+              0.1,
+              0.1
+            ],
+            "positional_vector": [
+              0.3,
+              0.0
+            ]
+          },
+          {
+            "token_index": 4,
+            "base_vector": [
+              0.1,
+              0.1
+            ],
+            "positional_vector": [
+              0.4,
+              0.0
+            ]
+          },
+          {
+            "token_index": 5,
+            "base_vector": [
+              0.2,
+              0.1
+            ],
+            "positional_vector": [
+              0.5,
+              0.0
+            ]
+          },
+          {
+            "token_index": 6,
+            "base_vector": [
+              0.7,
+              0.4
+            ],
+            "positional_vector": [
+              0.6,
+              0.0
+            ]
+          },
+          {
+            "token_index": 7,
+            "base_vector": [
+              0.1,
+              0.1
+            ],
+            "positional_vector": [
+              0.7,
+              0.0
+            ]
+          },
+          {
+            "token_index": 8,
+            "base_vector": [
+              0.5,
+              0.5
+            ],
+            "positional_vector": [
+              0.8,
+              0.0
+            ]
+          },
+          {
+            "token_index": 9,
+            "base_vector": [
+              0.1,
+              0.1
+            ],
+            "positional_vector": [
+              0.9,
+              0.0
+            ]
+          },
+          {
+            "token_index": 10,
+            "base_vector": [
+              0.1,
+              0.1
+            ],
+            "positional_vector": [
+              1.0,
+              0.0
+            ]
+          },
+          {
+            "token_index": 11,
+            "base_vector": [
+              0.9,
+              0.2
+            ],
+            "positional_vector": [
+              1.1,
+              0.0
+            ]
+          },
+          {
+            "token_index": 12,
+            "base_vector": [
+              0.1,
+              0.1
+            ],
+            "positional_vector": [
+              1.2,
+              0.0
+            ]
+          }
         ]
       },
-      {
-        "ref_profile_id": "emotional",
-        "activations": [
-          { "label": "Wissenschaftlich", "activation": 0.85, "color": "#3b82f6" },
-          { "label": "Funktional", "activation": 0.20, "color": "#10b981" },
-          { "label": "Sozial", "activation": 0.10, "color": "#f472b6" },
-          { "label": "Evolutionär", "activation": 0.05, "color": "#f59e0b" }
+      "phase_2_attention": {
+        "attention_profiles": [
+          {
+            "id": "scientific",
+            "label": "Logik-Modus (Korrekt)",
+            "rules": [
+              {
+                "head": 1,
+                "source": 10,
+                "target": 7,
+                "strength": 0.90,
+                "explanation": "Semantik: Fokus auf Behälter."
+              },
+              {
+                "head": 1,
+                "source": 10,
+                "target": 2,
+                "strength": 0.40,
+                "explanation": "Semantik: Alternative Referenz."
+              },
+              {
+                "head": 2,
+                "source": 10,
+                "target": 6,
+                "strength": 0.95,
+                "explanation": "Syntax: Genus-Match (die Tasche)."
+              },
+              {
+                "head": 2,
+                "source": 10,
+                "target": 1,
+                "strength": 0.60,
+                "explanation": "Syntax: Genus-Match (Die Trophäe)."
+              },
+              {
+                "head": 3,
+                "source": 10,
+                "target": 12,
+                "strength": 0.98,
+                "explanation": "Logik: 'sie' ist 'klein'."
+              },
+              {
+                "head": 3,
+                "source": 12,
+                "target": 7,
+                "strength": 0.85,
+                "explanation": "Logik: Schlussfolgerung auf Tasche."
+              },
+              {
+                "head": 4,
+                "source": 10,
+                "target": 7,
+                "strength": 0.70,
+                "explanation": "Struktur: Lokaler Bezug."
+              },
+              {
+                "head": 4,
+                "source": 10,
+                "target": 9,
+                "strength": 0.50,
+                "explanation": "Struktur: Kausal-Check."
+              }
+            ]
+          },
+          {
+            "id": "emotional",
+            "label": "Objekt-Modus (Fehlerhaft)",
+            "rules": [
+              {
+                "head": 1,
+                "source": 10,
+                "target": 2,
+                "strength": 0.95,
+                "explanation": "Semantik: Fokus auf Trophäe."
+              },
+              {
+                "head": 1,
+                "source": 10,
+                "target": 7,
+                "strength": 0.10,
+                "explanation": "Semantik: Ignoriert Tasche."
+              },
+              {
+                "head": 2,
+                "source": 10,
+                "target": 1,
+                "strength": 0.90,
+                "explanation": "Syntax: Fokus auf Satzanfang."
+              },
+              {
+                "head": 2,
+                "source": 10,
+                "target": 6,
+                "strength": 0.30,
+                "explanation": "Syntax: Vernachlässigt Objekt B."
+              },
+              {
+                "head": 3,
+                "source": 10,
+                "target": 2,
+                "strength": 0.85,
+                "explanation": "Logik: Trophäe wird als 'klein' markiert."
+              },
+              {
+                "head": 3,
+                "source": 10,
+                "target": 12,
+                "strength": 0.40,
+                "explanation": "Logik: Ungeprüfte Eigenschaft."
+              },
+              {
+                "head": 4,
+                "source": 10,
+                "target": 2,
+                "strength": 0.80,
+                "explanation": "Struktur: Fokus auf Subjekt."
+              },
+              {
+                "head": 4,
+                "source": 10,
+                "target": 3,
+                "strength": 0.30,
+                "explanation": "Struktur: Verb-Bezug."
+              }
+            ]
+          }
+        ]
+      },
+      "phase_3_ffn": {
+        "activation_profiles": [
+          {
+            "ref_profile_id": "scientific",
+            "activations": [
+              {
+                "label": "Wissenschaftlich",
+                "activation": 0.20,
+                "color": "#3b82f6"
+              },
+              {
+                "label": "Funktional",
+                "activation": 0.98,
+                "color": "#10b981"
+              },
+              {
+                "label": "Sozial",
+                "activation": 0.05,
+                "color": "#f472b6"
+              },
+              {
+                "label": "Evolutionär",
+                "activation": 0.05,
+                "color": "#f59e0b"
+              }
+            ]
+          },
+          {
+            "ref_profile_id": "emotional",
+            "activations": [
+              {
+                "label": "Wissenschaftlich",
+                "activation": 0.85,
+                "color": "#3b82f6"
+              },
+              {
+                "label": "Funktional",
+                "activation": 0.20,
+                "color": "#10b981"
+              },
+              {
+                "label": "Sozial",
+                "activation": 0.10,
+                "color": "#f472b6"
+              },
+              {
+                "label": "Evolutionär",
+                "activation": 0.05,
+                "color": "#f59e0b"
+              }
+            ]
+          }
+        ]
+      },
+      "phase_4_decoding": {
+        "outputs": [
+          {
+            "label": "Tasche",
+            "logit": 9.8,
+            "type": "Funktional",
+            "causality_trace": "Logik-Head erkennt: Behälter-Problem."
+          },
+          {
+            "label": "Trophäe",
+            "logit": 2.5,
+            "type": "Wissenschaftlich",
+            "causality_trace": "Logisch inkonsistent."
+          }
         ]
       }
-    ]
-  },
-  "phase_4_decoding": {
-    "outputs": [
-      { "label": "Tasche", "logit": 9.8, "type": "Funktional", "causality_trace": "Logik-Head erkennt: Behälter-Problem." },
-      { "label": "Trophäe", "logit": 2.5, "type": "Wissenschaftlich", "causality_trace": "Logisch inkonsistent." }
-    ]
-  }
-},
+    },
     {
       "id": "winograd-trophaee-tasche-klein2",
       "name": "Winograd-Schema: Pronomen-Auflösung durch Größenlogik (zu klein2)",
