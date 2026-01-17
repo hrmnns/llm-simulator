@@ -1,64 +1,107 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import PhaseLayout from './../PhaseLayout';
 
-const Phase3_FFN = ({ simulator, setHoveredItem, theme }) => {
-  const { mlpThreshold, setMlpThreshold, activeFFN, activeAttention } = simulator;
+const Phase3_FFN = ({ simulator, setHoveredItem, theme, activeScenario }) => {
+  const { mlpThreshold, setMlpThreshold, activeFFN, activeAttention, activeProfileId, headOverrides, sourceTokenId } = simulator;
   const [selectedLabel, setSelectedLabel] = useState(null);
 
   const pipelineSignal = activeAttention?.avgSignal || 1.0;
   const isDegraded = pipelineSignal < 0.7;
   const isCritical = pipelineSignal < 0.4;
 
-  // Hilfsfunktion für dynamische Styles basierend auf der JSON-Farbe
   const getDynamicStyles = (cat) => {
-    const baseColor = cat.color || "#3b82f6"; // Fallback auf Blau
+    const baseColor = cat.color || "#3b82f6";
     if (!cat.isActuallyActive) {
-      return {
-        borderColor: 'rgba(255,255,255,0.05)',
-        backgroundColor: 'rgba(15, 23, 42, 0.4)',
+      return { 
+        borderColor: 'rgba(255,255,255,0.05)', 
+        backgroundColor: 'rgba(15, 23, 42, 0.4)', 
         color: 'rgba(255,255,255,0.2)',
         boxShadow: 'none'
       };
     }
-    return {
-      borderColor: baseColor,
-      backgroundColor: `${baseColor}10`, // 10% Transparenz des Hex-Codes
-      color: baseColor,
-      boxShadow: `0 10px 15px -3px ${baseColor}33` // Subtiler Schatten in Kategoriefarbe
+    return { 
+      borderColor: baseColor, 
+      backgroundColor: `${baseColor}10`, 
+      color: baseColor, 
+      boxShadow: `0 10px 15px -3px ${baseColor}33` 
     };
   };
 
   const processedFFN = useMemo(() => {
     if (!activeFFN) return [];
-    return activeFFN.map(cat => ({
-      ...cat,
-      isActuallyActive: cat.activation >= mlpThreshold
-    }));
-  }, [activeFFN, mlpThreshold]);
+
+    const storageKey = activeScenario ? `sim_overrides_${activeScenario.id}` : 'sim_overrides_temp';
+    let savedData = {};
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (raw) savedData = JSON.parse(raw);
+    } catch (e) {}
+
+    const findUniversalWeight = (headNum) => {
+      const entries = Object.entries(savedData);
+      const matchingEntry = entries.find(([key]) => 
+        key.startsWith(`${activeProfileId}_`) && key.endsWith(`_h${headNum}`)
+      );
+      if (matchingEntry) return parseFloat(matchingEntry[1]);
+      
+      if (headOverrides) {
+        const stateEntry = Object.entries(headOverrides).find(([key]) => 
+          key.startsWith(`${activeProfileId}_`) && key.endsWith(`_h${headNum}`)
+        );
+        if (stateEntry) return parseFloat(stateEntry[1]);
+      }
+      return 0.7;
+    };
+
+    const wLogik = findUniversalWeight(3);
+    const wSemantik = findUniversalWeight(1);
+    const wSyntax = findUniversalWeight(2);
+    const wStruktur = findUniversalWeight(4);
+
+    return activeFFN.map(cat => {
+      const label = (cat.label || "").toLowerCase();
+      let factor = 1.0;
+
+      if (label.includes("funktional") || label.includes("functional")) {
+        factor = wLogik / 0.7; 
+      } 
+      else if (label.includes("wissenschaft") || label.includes("scientific")) {
+        factor = ((wSemantik + wSyntax) / 2) / 0.7;
+      }
+      else {
+        factor = ((wSemantik + wStruktur) / 2) / 0.7;
+      }
+
+      const finalVal = Math.max(0, Math.min(1.0, (cat.activation || 0) * factor * pipelineSignal));
+      
+      return {
+        ...cat,
+        activation: finalVal,
+        isActuallyActive: finalVal >= mlpThreshold,
+        currentWeight: factor
+      };
+    });
+  }, [activeFFN, mlpThreshold, activeProfileId, sourceTokenId, pipelineSignal, activeScenario, headOverrides]);
 
   const activeCategory = useMemo(() => {
-    const active = processedFFN.find(cat => cat.isActuallyActive);
-    return active ? active.label : "Keine Dominanz";
-  }, [processedFFN]);
-
-  if (!activeFFN || activeFFN.length === 0) {
-    return <div className="p-10 text-center text-slate-500 animate-pulse font-mono text-xs">Warte auf Aktivierungsdaten der Neuronen-Matrix...</div>;
-  }
+    const active = [...processedFFN].sort((a,b) => b.activation - a.activation)[0];
+    return (active && active.activation >= mlpThreshold) ? active.label : "Keine Dominanz";
+  }, [processedFFN, mlpThreshold]);
 
   const getInspectorData = (cat) => ({
     title: `🧠 Wissens-Extraktion: ${cat.label}`,
-    subtitle: `Pipeline-Integrität: ${(pipelineSignal * 100).toFixed(0)}%`,
+    subtitle: `Resonanz auf Phase 2 Heads`,
     data: {
       "--- Mechanik": "---",
       "Status": cat.isActuallyActive ? "AKTIVIERT" : "UNTERDRÜCKT",
       "Signal-Einfluss": isCritical ? "KRITISCH (Rauschen)" : isDegraded ? "GEDÄMPFT" : "OPTIMAL",
       "--- Mathematik": "---",
       "Netz-Spannung": (cat.activation * 100).toFixed(1) + "%",
-      "Kategorie-Farbe": cat.color || "Standard (Blau)",
+      "Slider-Einfluss": ((cat.currentWeight || 1) * 100).toFixed(0) + "%",
       "--- Erkenntnis": "---",
       "Information": cat.isActuallyActive 
-        ? `Das FFN-Netzwerk erkennt das Muster. Die Aktivierung liegt über dem Filter-Limit.` 
-        : `Der MLP-Filter (Threshold) blockiert diesen Wissenspfad.`
+        ? `Das FFN-Netzwerk erkennt das Muster durch die Verstärkung der relevanten Attention-Heads.` 
+        : `Die aktuelle Attention-Gewichtung reicht nicht aus, um dieses Wissensgebiet zu aktivieren.`
     }
   });
 
@@ -67,7 +110,7 @@ const Phase3_FFN = ({ simulator, setHoveredItem, theme }) => {
       const cat = processedFFN.find(c => c.label === selectedLabel);
       if (cat) setHoveredItem(getInspectorData(cat));
     }
-  }, [processedFFN, mlpThreshold, selectedLabel, setHoveredItem, pipelineSignal]);
+  }, [processedFFN, mlpThreshold, selectedLabel]);
 
   const handleCategoryClick = (cat, e) => {
     e.stopPropagation();
@@ -80,6 +123,8 @@ const Phase3_FFN = ({ simulator, setHoveredItem, theme }) => {
     }
   };
 
+  if (!activeFFN || activeFFN.length === 0) return null;
+
   return (
     <PhaseLayout
       title="Phase 3: FFN Knowledge Mapping"
@@ -91,6 +136,7 @@ const Phase3_FFN = ({ simulator, setHoveredItem, theme }) => {
       ]}
       visualization={
         <div className="w-full h-full flex flex-col justify-center items-center py-4" onClick={() => { setSelectedLabel(null); setHoveredItem(null); }}>
+          
           {isCritical && (
             <div className="absolute top-4 text-[10px] font-black text-red-500 animate-pulse z-50 uppercase tracking-widest">
               ⚠️ High Entropy Interference - Neural Mapping Unstable
@@ -104,45 +150,30 @@ const Phase3_FFN = ({ simulator, setHoveredItem, theme }) => {
               const dynamicStyles = getDynamicStyles(cat);
               
               return (
-                <div
-                  key={cat.label}
-                  style={dynamicStyles}
-                  className={`
-                    relative flex flex-col items-center justify-center p-8 rounded-2xl border-2 transition-all duration-500 cursor-pointer overflow-hidden
-                    ${!cat.isActuallyActive ? 'grayscale' : ''}
-                    ${isSelected ? 'ring-2 ring-white scale-105 z-20' : 'z-10'}
-                    ${glitchClass}
-                  `}
-                  onMouseEnter={() => setHoveredItem(getInspectorData(cat))}
+                <div key={cat.label} style={dynamicStyles}
+                  onMouseEnter={() => !selectedLabel && setHoveredItem(getInspectorData(cat))}
                   onMouseLeave={() => !selectedLabel && setHoveredItem(null)}
+                  className={`relative flex flex-col items-center justify-center p-8 rounded-2xl border-2 transition-all duration-500 cursor-pointer overflow-hidden ${!cat.isActuallyActive ? 'grayscale opacity-40' : ''} ${isSelected ? 'ring-2 ring-white scale-105 z-20' : 'z-10'} ${glitchClass}`}
                   onClick={(e) => handleCategoryClick(cat, e)}
                 >
-                  <div
-                    className="absolute bottom-0 left-0 w-full transition-all duration-1000 opacity-10 pointer-events-none"
-                    style={{
-                      height: `${cat.activation * 100}%`,
+                  <div className="absolute bottom-0 left-0 w-full transition-all duration-1000 opacity-10 pointer-events-none"
+                    style={{ 
+                      height: `${cat.activation * 100}%`, 
                       backgroundColor: 'currentColor',
                       filter: isDegraded ? `blur(${5 * (1 - pipelineSignal)}px)` : 'none'
-                    }}
-                  />
-
-                  <div className={`z-10 text-[10px] font-black uppercase tracking-widest text-center px-2 ${isCritical && cat.isActuallyActive ? 'blur-[0.5px]' : ''}`}>
-                    {cat.label}
-                  </div>
-
-                  <div className="z-10 text-[9px] font-mono mt-2 opacity-60">
-                    {(cat.activation * 100).toFixed(0)}% Active
-                  </div>
-
-                  {cat.isActuallyActive && (
-                    <div className={`absolute top-4 right-4 text-xl transition-all duration-500 ${isCritical ? 'rotate-12 scale-150' : ''}`}>
-                      {(cat.label.includes("Wissenschaft") || cat.label.includes("Scientific")) && "🔬"}
-                      {(cat.label.includes("Sozial") || cat.label.includes("Social")) && "🤝"}
-                      {(cat.label.includes("Funktional") || cat.label.includes("Functional")) && "⚙️"}
-                      {(cat.label.includes("Evolution") || cat.label.includes("Ancestral")) && "🦴"}
-                    </div>
-                  )}
+                    }} />
                   
+                  <div className="z-10 text-[10px] font-black uppercase tracking-widest text-center px-2">{cat.label}</div>
+                  <div className="z-10 text-[9px] font-mono mt-2 opacity-60">{(cat.activation * 100).toFixed(0)}% Active</div>
+                  
+                  {cat.isActuallyActive && <div className="absolute top-4 right-4 text-xl transition-all duration-500">
+                    {cat.label.includes("Wissenschaft") && "🔬"}
+                    {cat.label.includes("Funktional") && "⚙️"}
+                    {cat.label.includes("Sozial") && "🤝"}
+                    {cat.label.includes("Evolution") && "🦴"}
+                    {!["Wissenschaft", "Funktional", "Sozial", "Evolution"].some(s => cat.label.includes(s)) && "🧠"}
+                  </div>}
+
                   <div className={`absolute top-4 left-4 w-1.5 h-1.5 rounded-full ${cat.isActuallyActive ? 'bg-current shadow-[0_0_10px_currentColor]' : 'bg-slate-800'}`} />
                 </div>
               );
@@ -153,23 +184,11 @@ const Phase3_FFN = ({ simulator, setHoveredItem, theme }) => {
       controls={
         <div className="col-span-full px-6 py-4 bg-slate-900/80 rounded-xl border border-white/5 backdrop-blur-md" onClick={(e) => e.stopPropagation()}>
           <div className="flex justify-between items-center mb-3">
-            <label className="text-[9px] uppercase font-black text-slate-500 tracking-widest">
-              MLP Filter (Threshold)
-            </label>
-            <div className="text-sm font-mono font-black text-blue-400">
-              {mlpThreshold.toFixed(2)}
-            </div>
+            <label className="text-[9px] uppercase font-black text-slate-500 tracking-widest">MLP Filter (Threshold)</label>
+            <div className="text-sm font-mono font-black text-blue-400">{mlpThreshold.toFixed(2)}</div>
           </div>
-          <input
-            type="range" min="0" max="1" step="0.01"
-            value={mlpThreshold}
-            onChange={(e) => setMlpThreshold(parseFloat(e.target.value))}
-            className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
-          />
-          <div className="flex justify-between mt-2 text-[7px] font-bold text-slate-600 uppercase tracking-tighter">
-            <span className={isCritical ? "text-red-500 animate-pulse" : ""}>Zulassend (Chaos)</span>
-            <span>Selektiv (Strict)</span>
-          </div>
+          <input type="range" min="0" max="1" step="0.01" value={mlpThreshold} onChange={(e) => setMlpThreshold(parseFloat(e.target.value))}
+            className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500" />
         </div>
       }
     />

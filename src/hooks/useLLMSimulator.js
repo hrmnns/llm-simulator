@@ -6,9 +6,17 @@ export const useLLMSimulator = (activeScenario) => {
   const [activeProfileId, setActiveProfileId] = useState('scientific');
   const [mlpThreshold, setMlpThreshold] = useState(0.5);
   const [positionWeight, setPositionWeight] = useState(0);
+  const [headOverrides, setHeadOverrides] = useState({});
 
   // NEU: State für die Kommunikation zwischen Phase 4 und Phase 5
   const [selectedToken, setSelectedToken] = useState(null);
+
+  const updateHeadWeight = (key, value) => {
+    setHeadOverrides(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
 
   // Reset Selection wenn das Szenario wechselt
   useEffect(() => {
@@ -148,6 +156,10 @@ export const useLLMSimulator = (activeScenario) => {
     activeFFN,
     finalOutputs,
     activeAttention, // Neu exportiert
+    
+    headOverrides,
+    setHeadOverrides, // Für Massen-Updates / Reset
+    updateHeadWeight,
 
     noise, setNoise,
     temperature, setTemperature,
