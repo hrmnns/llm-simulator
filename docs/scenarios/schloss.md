@@ -63,13 +63,28 @@ Dieses Szenario ist das Herzstück der Demo für **vertikale Kausalität**. Nutz
       }
     ]
   },
-  "phase_3_ffn": {
+"phase_3_ffn": {
     "activation_profiles": [
       {
+        "id": "context-profile",
         "ref_profile_id": "context-check",
         "activations": [
-          { "label": "Funktional", "activation": 0.50, "linked_head": 3, "color": "#10b981" },
-          { "label": "Akademisch", "activation": 0.50, "linked_head": 1, "color": "#3b82f6" }
+          { 
+            "label": "Funktional", 
+            "activation": 0.50, 
+            "linked_head": 3, 
+            "color": "#10b981",
+            "icon": "⚙️",
+            "target_tokens": ["Türschloss", "Sperrvorrichtung", "Schlüssel"] 
+          },
+          { 
+            "label": "Akademisch", 
+            "activation": 0.50, 
+            "linked_head": 1, 
+            "color": "#3b82f6",
+            "icon": "🏛️",
+            "target_tokens": ["Prachtbau", "Residenz", "Burg"] 
+          }
         ]
       }
     ]
