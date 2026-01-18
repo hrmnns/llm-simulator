@@ -8,15 +8,14 @@
 
 ### Lernziel
 
-Dieses Szenario demonstriert den **Bruch der vertikalen Kausalität**. Es zeigt, wie extremes Rauschen (Noise) in der Attention-Phase und eine hohe Temperatur im Decoder dazu führen, dass das Modell den faktischen Pfad verlässt. Der Nutzer lernt, dass Halluzinationen keine „Lügen“ sind, sondern das Ergebnis mathematischer Instabilität (hoher Entropie).
+Dieses Szenario demonstriert die **vertikale Kausalität** und den **Kipppunkt der Logik**. Nutzer lernen, wie das Modell zwischen faktischer Korrektheit und strukturellem Nonsense schwankt. Es wird visualisiert, dass eine Halluzination (Bananen-Republik) dann entsteht, wenn die logische Attention-Kette (Phase 2) nicht genug Energie in die korrekte Wissens-Kategorie (Phase 3) leitet, um das MLP-Gate zu passieren.
 
 ## 2. Technische Logik: Die Kausalitäts-Brücke
 
-Um den Effekt des „Wegdriftens“ von Fakten zu simulieren, nutzt dieses Szenario die Logit-Bias-Formel, wobei hier die Kategorie „Zufall/Nonsense“ bei hohem Noise-Level künstlich bevorzugt wird:
+Das Szenario ist so kalibriert, dass der Nutzer den Ausgang des Satzes aktiv steuern kann:
 
-* : Die Aktivierung der Nonsense-Kategorie in Phase 3 (getriggert durch den Noise-Head in Phase 2).
-* : Der resultierende Bias, der absurde Token im Decoder nach vorne schiebt.
-* **Instabilitäts-Faktor:** In diesem Szenario ist der Noise-Parameter in Phase 4 mit dem Jitter-Effekt der UI gekoppelt.
+1. **Faktischer Pfad:** Head 3 (Logik) verknüpft das Verb "ist" mit dem Anker "Frankreich". Bei hoher slider-Stärke erreicht die Kategorie "Geographie" eine Aktivierung von **> 50%**, was in Phase 4 zu einem positiven Logit-Shift führt.
+2. **Halluzinations-Pfad:** Bei Deaktivierung von Head 3 fällt die Aktivierung unter das **MLP-Gate (20%)**. Das Wort "Paris" wird physikalisch blockiert, und der Decoder normiert die "Bananen-Republik" auf 100%.
 
 ## 3. Vollständiges Szenario-JSON (`scenarios.json`)
 
@@ -25,48 +24,44 @@ Um den Effekt des „Wegdriftens“ von Fakten zu simulieren, nutzt dieses Szena
   "id": "hallucination-lab-001",
   "name": "Halluzinations-Labor: Der Logik-Verlust",
   "input_prompt": "Die Hauptstadt von Frankreich ist",
-  "explanation": "Dieses Szenario zeigt, wie extremes Rauschen in Phase 2 und 4 dazu führt, dass das Modell trotz korrekter Tokenisierung den faktischen Pfad verlässt.",
+  "explanation": "Dieses Szenario demonstriert die Kausalitätskette: Wie ein starkes Attention-Signal (Phase 2) die Wissens-Kategorie (Phase 3) über den 50%-Kipppunkt hebt, um im Decoder (Phase 4) eine Fakten-Antwort gegen das Rauschen durchzusetzen.",
   "phase_0_tokenization": {
     "tokens": [
-      { "id": 0, "text": "Die", "explanation": "Artikel (Neutral)" },
-      { "id": 1, "text": "Hauptstadt", "explanation": "Semantischer Anker für Geographie." },
-      { "id": 2, "text": "von", "explanation": "Relationale Präposition." },
-      { "id": 3, "text": "Frankreich", "explanation": "Ziel-Entität (Faktisches Wissen)." },
-      { "id": 4, "text": "ist", "explanation": "Kopula (Leitet die Antwort ein)." }
+      { "id": "0", "text": "Die", "explanation": "Artikel (Neutral)" },
+      { "id": "1", "text": "Hauptstadt", "explanation": "Semantischer Anker für Geographie." },
+      { "id": "2", "text": "von", "explanation": "Relationale Präposition." },
+      { "id": "3", "text": "Frankreich", "explanation": "Ziel-Entität (Faktisches Wissen)." },
+      { "id": "4", "text": "ist", "explanation": "Kausale Query (ist -> ?)" }
     ]
   },
   "phase_1_embedding": {
     "token_vectors": [
-      { "token_index": 0, "base_vector": [0.1, 0.2], "positional_vector": [0.0, 0.1] },
-      { "token_index": 1, "base_vector": [0.8, 0.9], "positional_vector": [0.1, 0.1] },
-      { "token_index": 2, "base_vector": [0.2, 0.3], "positional_vector": [0.2, 0.1] },
-      { "token_index": 3, "base_vector": [0.9, 0.7], "positional_vector": [0.3, 0.1] },
-      { "token_index": 4, "base_vector": [0.4, 0.5], "positional_vector": [0.4, 0.1] }
+      { "token_index": 0, "base_vector": [0.1, 0.1], "positional_vector": [0.0, 0.1] },
+      { "token_index": 1, "base_vector": [0.4, 0.5], "positional_vector": [0.1, 0.1] },
+      { "token_index": 2, "base_vector": [0.2, 0.2], "positional_vector": [0.2, 0.1] },
+      { "token_index": 3, "base_vector": [0.8, 0.8], "positional_vector": [0.3, 0.1] },
+      { "token_index": 4, "base_vector": [0.1, 0.1], "positional_vector": [0.4, 0.1] }
     ]
   },
   "phase_2_attention": {
     "attention_profiles": [
       {
         "id": "entropy-mode",
-        "label": "Kontext: Hohes Rauschen",
+        "label": "Kontext: Instabile Logik",
         "rules": [
           {
-            "head": 1, "source": 4, "target": 3, "strength": 0.15,
-            "explanation": "Logik-Head: Zu schwach, um die Verbindung zu 'Frankreich' zu halten."
+            "head": 3,
+            "source": "4",
+            "target": "3",
+            "strength": 0.95,
+            "explanation": "Logik: Starke Kontext-Leitung zu 'Frankreich'."
           },
           {
-            "head": 3, "source": 4, "target": 0, "strength": 0.85,
-            "explanation": "Noise-Head: Zieht die Aufmerksamkeit auf statistisch irrelevante Token."
-          }
-        ]
-      },
-      {
-        "id": "factual-mode",
-        "label": "Kontext: Faktische Präzision",
-        "rules": [
-          {
-            "head": 1, "source": 4, "target": 3, "strength": 0.95,
-            "explanation": "Logik-Head: Starke Bindung zwischen 'ist' und 'Frankreich'."
+            "head": 4,
+            "source": "4",
+            "target": "0",
+            "strength": 0.30,
+            "explanation": "Struktur: Reduziertes Grundrauschen für klarere Effekte."
           }
         ]
       }
@@ -77,16 +72,16 @@ Um den Effekt des „Wegdriftens“ von Fakten zu simulieren, nutzt dieses Szena
       {
         "ref_profile_id": "entropy-mode",
         "activations": [
-          { "label": "Zufall/Nonsense", "activation": 0.92, "color": "#F97316" },
-          { "label": "Geographie", "activation": 0.10, "color": "#3B82F6" },
-          { "label": "Abstrakt", "activation": 0.30, "color": "#A855F7" }
-        ]
-      },
-      {
-        "ref_profile_id": "factual-mode",
-        "activations": [
-          { "label": "Geographie", "activation": 0.95, "color": "#3B82F6" },
-          { "label": "Zufall/Nonsense", "activation": 0.05, "color": "#F97316" }
+          {
+            "label": "Geographie",
+            "activation": 0.80,
+            "color": "#3b82f6"
+          },
+          {
+            "label": "Zufall/Nonsense",
+            "activation": 0.40,
+            "color": "#f97316"
+          }
         ]
       }
     ]
@@ -95,21 +90,15 @@ Um den Effekt des „Wegdriftens“ von Fakten zu simulieren, nutzt dieses Szena
     "outputs": [
       {
         "label": "Paris",
-        "logit": 2.1,
+        "logit": 5.0,
         "type": "Geographie",
-        "causality_trace": "Eigentlich korrekt, wird aber durch Noise unterdrückt."
+        "causality_trace": "Wird durch Logik-Aktivierung >50% massiv verstärkt."
       },
       {
         "label": "Bananen-Republik",
-        "logit": 8.5,
+        "logit": 5.0,
         "type": "Zufall/Nonsense",
-        "causality_trace": "Gewinnt durch massiven Logit-Bias aus der Nonsense-Aktivierung."
-      },
-      {
-        "label": "blau",
-        "logit": 4.2,
-        "type": "Abstrakt",
-        "causality_trace": "Assoziative Halluzination (Farbe der Flagge)."
+        "causality_trace": "Standard-Ausgabe, sinkt bei logischem Fokus."
       }
     ]
   }
@@ -119,14 +108,14 @@ Um den Effekt des „Wegdriftens“ von Fakten zu simulieren, nutzt dieses Szena
 
 ## 4. Test-Szenarien & Erwartetes Verhalten
 
-| Testfall | UI-Eingriff (Phase 2) | Effekt (Phase 3) | Vorhersage (Phase 4) | Didaktischer Fokus |
+| Testfall | UI-Eingriff (Phase 2/3) | Effekt (Phase 3) | Vorhersage (Phase 4) | Erwartetes Ergebnis |
 | --- | --- | --- | --- | --- |
-| **A: Faktencheck** | Logic-Head auf **1.0** | Geographie > 90% | **Paris** (🎯) | System arbeitet im Normalzustand. |
-| **B: Der Drift** | Noise-Head auf **0.9** | Nonsense > 80% | **Bananen-Republik** | Wie Rauschen Fakten verdrängt. |
-| **C: Maximale Entropie** | Temp auf **1.8** + Noise | Diffuse Verteilung | **🥴 Jitter-Effekt** | Visualisierung des totalen Logik-Zusammenbruchs. |
+| **A: Logik-Sieg** | Head 3 Slider auf **1.0** | Geographie  | **Paris** (75-90%) | Fakten setzen sich durch. |
+| **B: MLP-Blockade** | Head 3 Slider auf **0.1** | Geographie  | **Bananen-Republik** | Paris wird hart gefiltert. |
+| **C: Rauschen** | Temp auf **1.5** + Slider 0.7 | Diffuse Verteilung | **🎲 Wechselnd** | Modell schwankt zwischen Wahrheit und Halluzination. |
 
-## 5. UI/UX Dokumentation
+## 5. UI/UX Features des Szenarios
 
-* **Entropy-Visualizer:** Bei Auswahl des `entropy-mode` wird ein Glitch-Shader über Phase 2 und 3 gelegt, um die Instabilität visuell zu untermalen.
-* **🥴 Halluzinations-Icon:** Erscheint in Phase 4 neben dem Token, wenn das `hallucination_risk` (berechnet aus der Differenz zwischen Top-1 und Top-2 Logit bei hoher Temp)  liegt.
-* **Kausalitäts-Warnung:** Ein Infotext in Phase 5 erklärt: *"Die vertikale Kausalität ist unterbrochen: Phase 2 (Attention) lieferte keine stabile Basis für Phase 3 (FFN)."*
+* **Interaktive Kausalität:** Der Nutzer kann live zusehen, wie Paris im Decoder erscheint oder verschwindet, wenn der Schwellenwert in Phase 3 die 20%-Marke unter- oder überschreitet.
+* **Inspektor-Feedback:** Bei Auswahl von Paris im Decoder zeigt der Inspektor den Einfluss von "Head 3 (Logik)" und den resultierenden Logit-Shift an.
+* **Resampling-Dynamik:** Bei mittleren Einstellungen (75% Paris) erlaubt der "🎲 Re-Sample" Button die Demonstration des probabilistischen Charakters – gelegentlich "gewinnt" die Bananen-Republik trotz logischer Anbindung.
