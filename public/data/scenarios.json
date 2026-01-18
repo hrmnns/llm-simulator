@@ -6,7 +6,7 @@
       "id": "polysemie-schloss-labor",
       "name": "Mehrdeutigkeit: Das Schloss",
       "input_prompt": "Das Schloss war für den Einbrecher kein Hindernis.",
-      "explanation": "Dieses Szenario demonstriert, wie die Attention-Heads entscheiden, welche Bedeutung ein mehrdeutiges Wort (Schloss) annimmt. Je nachdem, ob die KI auf 'Einbrecher' oder 'Hindernis' achtet, ändert sich das Weltwissen.",
+      "explanation": "Dieses Szenario demonstriert die Kausalitätskette eines LLMs: Attention-Heads (Phase 2) steuern die Wissens-Aktivierung (Phase 3), was wiederum die Wort-Wahrscheinlichkeiten im Decoder (Phase 4) physikalisch verschiebt.",
       "phase_0_tokenization": {
         "tokens": [
           {
@@ -17,37 +17,37 @@
           {
             "id": "2",
             "text": "Schloss",
-            "explanation": "Mehrdeutiges Nomen (Query-Token)"
+            "explanation": "Polysemes Nomen (Zentrum der Analyse)"
           },
           {
             "id": "3",
             "text": "war",
-            "explanation": "Kopula-Verb"
+            "explanation": "Kopula-Verb (Zustand)"
           },
           {
             "id": "4",
             "text": "für",
-            "explanation": "Präposition"
+            "explanation": "Präposition (Bezug)"
           },
           {
             "id": "5",
             "text": "den",
-            "explanation": "Artikel"
+            "explanation": "Artikel (Bestimmt)"
           },
           {
             "id": "6",
             "text": "Einbrecher",
-            "explanation": "Kontext-Geber (Funktional)"
+            "explanation": "Kontext-Anker für funktionale Bedeutung."
           },
           {
             "id": "7",
             "text": "kein",
-            "explanation": "Negations-Artikel"
+            "explanation": "Negation"
           },
           {
             "id": "8",
             "text": "Hindernis",
-            "explanation": "Kontext-Geber (Abstrakt)"
+            "explanation": "Abstrakter Kontext-Anker."
           },
           {
             "id": "9",
@@ -163,76 +163,55 @@
         "attention_profiles": [
           {
             "id": "scientific",
-            "label": "Kontextuelle Logik (Einbrecher)",
+            "label": "Kontext: Sicherheit & Mechanik",
             "rules": [
               {
                 "head": 1,
                 "source": "2",
                 "target": "6",
-                "strength": 0.95,
-                "explanation": "Semantik: Starke Kopplung zwischen 'Schloss' und 'Einbrecher' (Sicherheitsebene)."
+                "strength": 0.90,
+                "explanation": "Semantik: 'Einbrecher' zieht die Bedeutung von 'Schloss' zur Mechanik."
               },
               {
-                "head": 1,
+                "head": 3,
                 "source": "2",
-                "target": "8",
-                "strength": 0.40,
-                "explanation": "Semantik: Schwacher Bezug zum abstrakten Hindernis."
+                "target": "6",
+                "strength": 0.95,
+                "explanation": "Logik: Funktionale Interaktion zwischen Akteur und Objekt."
               },
               {
                 "head": 2,
                 "source": "2",
                 "target": "1",
                 "strength": 0.80,
-                "explanation": "Syntax: Grammatische Bindung an den vorangestellten Artikel."
-              },
-              {
-                "head": 3,
-                "source": "2",
-                "target": "6",
-                "strength": 0.90,
-                "explanation": "Logik: Einbrecher interagieren funktional mit Türschlössern."
-              },
-              {
-                "head": 4,
-                "source": "2",
-                "target": "8",
-                "strength": 0.70,
-                "explanation": "Struktur: Lokale Nähe zum Prädikatswort."
+                "explanation": "Syntax: Korrekte Artikel-Bindung."
               }
             ]
           },
           {
-            "id": "emotional",
-            "label": "Oberflächliche Assoziation (Gebäude)",
+            "id": "architectural",
+            "label": "Kontext: Architektur & Bauwerk",
             "rules": [
               {
                 "head": 1,
                 "source": "2",
-                "target": "1",
-                "strength": 0.90,
-                "explanation": "Semantik: Fixierung auf das Wort 'Schloss' als isoliertes Monument."
-              },
-              {
-                "head": 2,
-                "source": "2",
-                "target": "3",
+                "target": "8",
                 "strength": 0.85,
-                "explanation": "Syntax: Verbindung zum Verb am Satzanfang."
+                "explanation": "Semantik: 'Schloss' wird als monumentales Hindernis/Gebäude interpretiert."
               },
               {
                 "head": 3,
                 "source": "2",
                 "target": "8",
-                "strength": 0.40,
-                "explanation": "Logik: Vernachlässigung der Einbrecher-Komponente."
+                "strength": 0.50,
+                "explanation": "Logik: Ein Gebäude als räumliches Hindernis."
               },
               {
                 "head": 4,
                 "source": "2",
                 "target": "2",
-                "strength": 0.99,
-                "explanation": "Struktur: Starke Self-Attention (Wort bleibt bei sich selbst)."
+                "strength": 0.90,
+                "explanation": "Struktur: Fokus auf das Nomen selbst ohne externen Kontext."
               }
             ]
           }
@@ -244,43 +223,43 @@
             "ref_profile_id": "scientific",
             "activations": [
               {
+                "label": "Funktional",
+                "activation": 0.65,
+                "color": "#10b981"
+              },
+              {
                 "label": "Wissenschaftlich",
                 "activation": 0.20,
                 "color": "#3b82f6"
               },
               {
-                "label": "Funktional",
-                "activation": 0.60,
-                "color": "#10b981"
-              },
-              {
                 "label": "Sozial",
-                "activation": 0.40,
+                "activation": 0.35,
                 "color": "#f472b6"
               },
               {
                 "label": "Evolutionär",
-                "activation": 0.10,
+                "activation": 0.05,
                 "color": "#f59e0b"
               }
             ]
           },
           {
-            "ref_profile_id": "emotional",
+            "ref_profile_id": "architectural",
             "activations": [
               {
                 "label": "Wissenschaftlich",
-                "activation": 0.80,
+                "activation": 0.75,
                 "color": "#3b82f6"
               },
               {
                 "label": "Funktional",
-                "activation": 0.10,
+                "activation": 0.15,
                 "color": "#10b981"
               },
               {
                 "label": "Sozial",
-                "activation": 0.20,
+                "activation": 0.10,
                 "color": "#f472b6"
               },
               {
@@ -296,21 +275,361 @@
         "outputs": [
           {
             "label": "Türschloss",
-            "logit": 9.4,
+            "logit": 5.2,
             "type": "Funktional",
-            "causality_trace": "Head 3 (Logik) hat die funktionale Verbindung zum 'Einbrecher' priorisiert."
+            "causality_trace": "Wird durch 'Funktional'-Aktivierung massiv verstärkt."
           },
           {
             "label": "Prachtbau",
-            "logit": 2.1,
+            "logit": 4.9,
             "type": "Wissenschaftlich",
-            "causality_trace": "Logisch abgewertet, da Einbrecher selten Gebäude als Ganzes 'überwinden'."
+            "causality_trace": "Basis-Wahrscheinlichkeit hoch, sinkt aber bei mechanischem Fokus."
           },
           {
             "label": "Riegel",
-            "logit": 4.5,
+            "logit": 3.8,
             "type": "Funktional",
-            "causality_trace": "Semantisch verwandte Alternative im Sicherheitskontext."
+            "causality_trace": "Mechanische Alternative zu 'Türschloss'."
+          },
+          {
+            "label": "Residenz",
+            "logit": 3.5,
+            "type": "Wissenschaftlich",
+            "causality_trace": "Architektonische Alternative zum Hauptgebäude."
+          },
+          {
+            "label": "Sicherheit",
+            "logit": 2.5,
+            "type": "Funktional",
+            "causality_trace": "Abstrakter Begriff aus dem Sicherheitsbereich."
+          }
+        ]
+      }
+    },
+    {
+      "id": "hallucination-lab-001",
+      "name": "Halluzinations-Labor: Der Logik-Verlust",
+      "input_prompt": "Die Hauptstadt von Frankreich ist",
+      "explanation": "Dieses Szenario demonstriert die Kausalitätskette: Wie ein starkes Attention-Signal (Phase 2) die Wissens-Kategorie (Phase 3) über den 50%-Kipppunkt hebt, um im Decoder (Phase 4) eine Fakten-Antwort gegen das Rauschen durchzusetzen.",
+      "phase_0_tokenization": {
+        "tokens": [
+          {
+            "id": "0",
+            "text": "Die",
+            "explanation": "Artikel (Neutral)"
+          },
+          {
+            "id": "1",
+            "text": "Hauptstadt",
+            "explanation": "Semantischer Anker für Geographie."
+          },
+          {
+            "id": "2",
+            "text": "von",
+            "explanation": "Relationale Präposition."
+          },
+          {
+            "id": "3",
+            "text": "Frankreich",
+            "explanation": "Ziel-Entität (Faktisches Wissen)."
+          },
+          {
+            "id": "4",
+            "text": "ist",
+            "explanation": "Kausale Query (ist -> ?)"
+          }
+        ]
+      },
+      "phase_1_embedding": {
+        "token_vectors": [
+          {
+            "token_index": 0,
+            "base_vector": [
+              0.1,
+              0.1
+            ],
+            "positional_vector": [
+              0.0,
+              0.1
+            ]
+          },
+          {
+            "token_index": 1,
+            "base_vector": [
+              0.4,
+              0.5
+            ],
+            "positional_vector": [
+              0.1,
+              0.1
+            ]
+          },
+          {
+            "token_index": 2,
+            "base_vector": [
+              0.2,
+              0.2
+            ],
+            "positional_vector": [
+              0.2,
+              0.1
+            ]
+          },
+          {
+            "token_index": 3,
+            "base_vector": [
+              0.8,
+              0.8
+            ],
+            "positional_vector": [
+              0.3,
+              0.1
+            ]
+          },
+          {
+            "token_index": 4,
+            "base_vector": [
+              0.1,
+              0.1
+            ],
+            "positional_vector": [
+              0.4,
+              0.1
+            ]
+          }
+        ]
+      },
+      "phase_2_attention": {
+        "attention_profiles": [
+          {
+            "id": "entropy-mode",
+            "label": "Kontext: Instabile Logik",
+            "rules": [
+              {
+                "head": 3,
+                "source": "4",
+                "target": "3",
+                "strength": 0.95,
+                "explanation": "Logik: Starke Kontext-Leitung zu 'Frankreich'."
+              },
+              {
+                "head": 4,
+                "source": "4",
+                "target": "0",
+                "strength": 0.30,
+                "explanation": "Struktur: Reduziertes Grundrauschen für klarere Effekte."
+              }
+            ]
+          }
+        ]
+      },
+      "phase_3_ffn": {
+        "activation_profiles": [
+          {
+            "ref_profile_id": "entropy-mode",
+            "activations": [
+              {
+                "label": "Geographie",
+                "activation": 0.80,
+                "color": "#3b82f6"
+              },
+              {
+                "label": "Zufall/Nonsense",
+                "activation": 0.40,
+                "color": "#f97316"
+              }
+            ]
+          }
+        ]
+      },
+      "phase_4_decoding": {
+        "outputs": [
+          {
+            "label": "Paris",
+            "logit": 5.0,
+            "type": "Geographie",
+            "causality_trace": "Wird durch Logik-Aktivierung >50% massiv verstärkt."
+          },
+          {
+            "label": "Bananen-Republik",
+            "logit": 5.0,
+            "type": "Zufall/Nonsense",
+            "causality_trace": "Standard-Ausgabe, sinkt bei logischem Fokus."
+          }
+        ]
+      }
+    },
+    {
+      "id": "poetry-generator-001",
+      "name": "Poesie-Generator: Kreative Resonanz",
+      "input_prompt": "Der Mond scheint hell auf das",
+      "explanation": "Dieses Szenario zeigt die kreative Seite des Modells. Durch semantische Verknüpfung und hohe Temperatur entstehen atmosphärische Wortfolgen statt reiner Fakten.",
+      "phase_0_tokenization": {
+        "tokens": [
+          {
+            "id": "0",
+            "text": "Der",
+            "explanation": "Artikel."
+          },
+          {
+            "id": "1",
+            "text": "Mond",
+            "explanation": "Semantischer Anker (Natur/Nacht)."
+          },
+          {
+            "id": "2",
+            "text": "scheint",
+            "explanation": "Verb (Licht-Emission)."
+          },
+          {
+            "id": "3",
+            "text": "hell",
+            "explanation": "Adjektiv (Intensität)."
+          },
+          {
+            "id": "4",
+            "text": "auf",
+            "explanation": "Präposition (Richtung)."
+          },
+          {
+            "id": "5",
+            "text": "das",
+            "explanation": "Artikel (Neutral)."
+          }
+        ]
+      },
+      "phase_1_embedding": {
+        "token_vectors": [
+          {
+            "token_index": 0,
+            "base_vector": [
+              -0.1,
+              -0.1
+            ],
+            "positional_vector": [
+              0.0,
+              0.1
+            ]
+          },
+          {
+            "token_index": 1,
+            "base_vector": [
+              0.8,
+              0.9
+            ],
+            "positional_vector": [
+              0.1,
+              0.1
+            ]
+          },
+          {
+            "token_index": 2,
+            "base_vector": [
+              0.3,
+              0.4
+            ],
+            "positional_vector": [
+              0.2,
+              0.1
+            ]
+          },
+          {
+            "token_index": 3,
+            "base_vector": [
+              0.6,
+              0.7
+            ],
+            "positional_vector": [
+              0.3,
+              0.1
+            ]
+          },
+          {
+            "token_index": 5,
+            "base_vector": [
+              0.1,
+              -0.1
+            ],
+            "positional_vector": [
+              0.5,
+              0.1
+            ]
+          }
+        ]
+      },
+      "phase_2_attention": {
+        "attention_profiles": [
+          {
+            "id": "poetic-mode",
+            "label": "Kontext: Lyrische Atmosphäre",
+            "rules": [
+              {
+                "head": 1,
+                "source": "5",
+                "target": "1",
+                "strength": 0.90,
+                "explanation": "Semantik: 'Mond' aktiviert nächtliche Bildsprache."
+              },
+              {
+                "head": 1,
+                "source": "5",
+                "target": "3",
+                "strength": 0.85,
+                "explanation": "Semantik: 'hell' verstärkt visuelle Kontraste."
+              }
+            ]
+          }
+        ]
+      },
+      "phase_3_ffn": {
+        "activation_profiles": [
+          {
+            "ref_profile_id": "poetic-mode",
+            "activations": [
+              {
+                "label": "Poetisch",
+                "activation": 0.85,
+                "color": "#a855f7"
+              },
+              {
+                "label": "Wissenschaftlich",
+                "activation": 0.15,
+                "color": "#3b82f6"
+              },
+              {
+                "label": "Funktional",
+                "activation": 0.30,
+                "color": "#10b981"
+              }
+            ]
+          }
+        ]
+      },
+      "phase_4_decoding": {
+        "outputs": [
+          {
+            "label": "Silbermeer",
+            "logit": 4.8,
+            "type": "Poetisch",
+            "causality_trace": "Metaphorische Verknüpfung von Licht und Reflexion."
+          },
+          {
+            "label": "Dunkelblau",
+            "logit": 4.5,
+            "type": "Poetisch",
+            "causality_trace": "Farbausdruck der nächtlichen Szenerie."
+          },
+          {
+            "label": "Dach",
+            "logit": 5.2,
+            "type": "Funktional",
+            "causality_trace": "Die wahrscheinlichste, aber unkreative Fortsetzung."
+          },
+          {
+            "label": "Fensterglas",
+            "logit": 4.0,
+            "type": "Funktional",
+            "causality_trace": "Physisches Objekt im Lichtstrahl."
           }
         ]
       }

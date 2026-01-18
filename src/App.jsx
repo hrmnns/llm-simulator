@@ -10,7 +10,7 @@ import InternalHeader from './components/InternalHeader';
 import GlossaryModal from './components/GlossaryModal';
 import InfoModal from './components/InfoModal';
 import IntroScreen from './components/IntroScreen';
-import PhaseBriefing from './components/PhaseBriefing'; 
+import PhaseBriefing from './components/PhaseBriefing';
 
 // Phasen-Importe
 import Phase0_Tokenization from './components/phases/Phase0_Tokenization';
@@ -52,12 +52,49 @@ function AppContent() {
       .then(res => res.json())
       .then(data => setGlossaryData(data))
       .catch(err => console.error("Glossar-Ladefehler:", err));
-    
+
     fetch(`${import.meta.env.BASE_URL}data/phaseBriefings.json`)
       .then(res => res.json())
       .then(data => setBriefings(data))
       .catch(err => console.error("Briefing-Ladefehler:", err));
   }, []);
+
+  useEffect(() => {
+    if (!activeScenario) return;
+
+    console.log("🔄 Szenario-Wechsel erkannt: Reset auf Defaults für", activeScenario.name);
+
+    // 1. Manuelle Overrides leeren
+    // Wir löschen die Slider-Werte im State, damit die Werte aus dem JSON greifen
+    if (simulator.setHeadOverrides) {
+      simulator.setHeadOverrides({});
+    }
+
+    // 2. Globale Parameter auf Standardwerte zurücksetzen
+    // Falls das Szenario keine eigenen Defaults mitbringt, nutzen wir die Standardwerte
+    if (simulator.setTemperature) simulator.setTemperature(0.7);
+    if (simulator.setNoise) simulator.setNoise(0.0);
+    if (simulator.setMlpThreshold) simulator.setMlpThreshold(0.2);
+
+    // 3. Erstes Profil des neuen Szenarios als aktiv setzen
+    const firstProfileId = activeScenario.phase_2_attention?.attention_profiles[0]?.id;
+    if (firstProfileId && simulator.setActiveProfileId) {
+      simulator.setActiveProfileId(firstProfileId);
+    }
+
+    // 4. Standard-Token (Query) auswählen
+    // Meistens ist das zweite Token (Index 1) das spannende Query-Token
+    const defaultTokenId = activeScenario.phase_0_tokenization?.tokens[1]?.id;
+    if (defaultTokenId && simulator.setSourceTokenId) {
+      simulator.setSourceTokenId(defaultTokenId);
+    }
+
+    // 5. SessionStorage-Bereinigung (Optional)
+    // Wenn du möchtest, dass beim Wechsel auch der Speicher geleert wird:
+    // const storageKey = `sim_overrides_${activeScenario.id}`;
+    // sessionStorage.removeItem(storageKey);
+
+  }, [activeScenario?.id]); // Triggert nur, wenn sich die ID des Szenarios ändert
 
   // Automatischer Scroll nach oben bei Phasenwechsel
   useEffect(() => {
@@ -100,9 +137,8 @@ function AppContent() {
 
   // 6. RENDER LOGIK
   return (
-    <div className={`min-h-screen lg:h-screen flex flex-col transition-colors duration-700 ${
-      theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
-    } font-sans overflow-hidden`}>
+    <div className={`min-h-screen lg:h-screen flex flex-col transition-colors duration-700 ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+      } font-sans overflow-hidden`}>
 
       {/* GLOBALER BRIEFING-DIALOG */}
       {showBriefing && briefings[activePhase] && (
@@ -146,21 +182,20 @@ function AppContent() {
         </main>
       ) : (
         <>
-          <PhaseNavigator 
-            activePhase={activePhase} 
-            setActivePhase={setActivePhase} 
-            activeScenario={activeScenario} 
-            theme={theme} 
-            onOpenBriefing={() => setShowBriefing(true)} 
+          <PhaseNavigator
+            activePhase={activePhase}
+            setActivePhase={setActivePhase}
+            activeScenario={activeScenario}
+            theme={theme}
+            onOpenBriefing={() => setShowBriefing(true)}
           />
 
           <main className="flex-1 flex flex-col items-center pt-4 pb-4 px-4 overflow-y-auto lg:overflow-hidden min-h-0">
             <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-4 h-auto lg:h-full min-h-0">
 
               {/* VISUALISIERUNGS-PANEL */}
-              <div className={`w-full lg:flex-[2.5] relative border rounded-[2rem] shadow-2xl overflow-hidden backdrop-blur-md transition-all duration-500 flex flex-col min-h-[500px] lg:min-h-0 ${
-                theme === 'dark' ? 'bg-slate-900/40 border-slate-800' : 'bg-white/80 border-slate-200'
-              }`}>
+              <div className={`w-full lg:flex-[2.5] relative border rounded-[2rem] shadow-2xl overflow-hidden backdrop-blur-md transition-all duration-500 flex flex-col min-h-[500px] lg:min-h-0 ${theme === 'dark' ? 'bg-slate-900/40 border-slate-800' : 'bg-white/80 border-slate-200'
+                }`}>
 
                 {(!activeScenario || !simulator) ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/50 backdrop-blur-sm z-50">
@@ -198,7 +233,7 @@ function AppContent() {
       )}
 
       <Footer className="shrink-0" />
-      
+
       {/* MODALS */}
       <GlossaryModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} data={glossaryData} />
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} theme={theme} />

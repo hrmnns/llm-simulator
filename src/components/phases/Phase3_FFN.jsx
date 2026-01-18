@@ -9,84 +9,77 @@ const Phase3_FFN = ({ simulator, setHoveredItem, theme, activeScenario }) => {
   const isDegraded = pipelineSignal < 0.7;
   const isCritical = pipelineSignal < 0.4;
 
-  const getDynamicStyles = (cat) => {
-    const baseColor = cat.color || "#3b82f6";
-    if (!cat.isActuallyActive) {
-      return { 
-        borderColor: 'rgba(255,255,255,0.05)', 
-        backgroundColor: 'rgba(15, 23, 42, 0.4)', 
-        color: 'rgba(255,255,255,0.2)',
-        boxShadow: 'none'
-      };
-    }
-    return { 
-      borderColor: baseColor, 
-      backgroundColor: `${baseColor}10`, 
-      color: baseColor, 
-      boxShadow: `0 10px 15px -3px ${baseColor}33` 
-    };
-  };
-
   const processedFFN = useMemo(() => {
     if (!activeFFN) return [];
 
-    const storageKey = activeScenario ? `sim_overrides_${activeScenario.id}` : 'sim_overrides_temp';
-    let savedData = {};
-    try {
-      const raw = sessionStorage.getItem(storageKey);
-      if (raw) savedData = JSON.parse(raw);
-    } catch (e) {}
+    const getActiveHeadSignal = (headNum) => {
+      // 1. Suche den Slider-Wert mit maximaler Toleranz
+      // Wir suchen erst den spezifischen Key, dann einen Fallback
+      const specificKey = `${activeProfileId}_s${sourceTokenId}_h${headNum}`;
 
-    const findUniversalWeight = (headNum) => {
-      const entries = Object.entries(savedData);
-      const matchingEntry = entries.find(([key]) => 
-        key.startsWith(`${activeProfileId}_`) && key.endsWith(`_h${headNum}`)
+      // Falls der spezifische Token-Key nicht da ist, suchen wir IRGENDEINEN Wert 
+      // für diesen Head im aktuellen Profil (Loose Matching)
+      const looseKeyPart = `_h${headNum}`;
+      const looseMatch = Object.entries(headOverrides || {}).find(([key]) =>
+        key.startsWith(activeProfileId) && key.endsWith(looseKeyPart)
       );
-      if (matchingEntry) return parseFloat(matchingEntry[1]);
-      
-      if (headOverrides) {
-        const stateEntry = Object.entries(headOverrides).find(([key]) => 
-          key.startsWith(`${activeProfileId}_`) && key.endsWith(`_h${headNum}`)
-        );
-        if (stateEntry) return parseFloat(stateEntry[1]);
-      }
-      return 0.7;
+
+      const slider = headOverrides?.[specificKey] ?? (looseMatch ? parseFloat(looseMatch[1]) : 0.7);
+      const sliderFactor = slider / 0.7;
+
+      // 2. Regeln suchen (Robustheit bei ID-Typen)
+      const rules = activeAttention?.rules?.filter(r =>
+        String(r.source) === String(sourceTokenId) && Number(r.head) === Number(headNum)
+      ) || [];
+
+      // 3. Signal-Berechnung mit "Torque-Upgrade"
+      // Wir nehmen 0.30 als Basis-Resonanz, damit der Slider immer eine Wirkung hat
+      const rulesSum = rules.length > 0
+        ? rules.reduce((acc, r) => acc + parseFloat(r.strength), 0)
+        : 0.30;
+
+      return Math.min(1.5, rulesSum * sliderFactor);
     };
 
-    const wLogik = findUniversalWeight(3);
-    const wSemantik = findUniversalWeight(1);
-    const wSyntax = findUniversalWeight(2);
-    const wStruktur = findUniversalWeight(4);
+    const sLogik = getActiveHeadSignal(3);
+    const sStruktur = getActiveHeadSignal(4);
+    const sSemantik = getActiveHeadSignal(1);
+    const sSyntax = getActiveHeadSignal(2);
 
     return activeFFN.map(cat => {
       const label = (cat.label || "").toLowerCase();
       let factor = 1.0;
+      let debugVal = 0.7;
 
-      if (label.includes("funktional") || label.includes("functional")) {
-        factor = wLogik / 0.7; 
-      } 
-      else if (label.includes("wissenschaft") || label.includes("scientific")) {
-        factor = ((wSemantik + wSyntax) / 2) / 0.7;
+      if (label.includes("geographie") || label.includes("fakten") || label.includes("funktional")) {
+        factor = sLogik;
+        debugVal = sLogik;
       }
-      else {
-        factor = ((wSemantik + wStruktur) / 2) / 0.7;
+      else if (label.includes("nonsense") || label.includes("zufall")) {
+        factor = sStruktur;
+        debugVal = sStruktur;
+      }
+      else if (label.includes("wissenschaft")) {
+        factor = (sSemantik + sSyntax) / 2;
+        debugVal = sSemantik;
+      }
+      else if (label.includes("sozial")) {
+        factor = sSemantik;
+        debugVal = sSemantik;
       }
 
-      const finalVal = Math.max(0, Math.min(1.0, (cat.activation || 0) * factor * pipelineSignal));
-      
+      const baseVal = cat.activation || 0;
+      const finalVal = Math.max(0, Math.min(1.0, baseVal * factor));
+
       return {
         ...cat,
         activation: finalVal,
         isActuallyActive: finalVal >= mlpThreshold,
-        currentWeight: factor
+        currentWeight: factor,
+        debugHeadVal: debugVal
       };
     });
-  }, [activeFFN, mlpThreshold, activeProfileId, sourceTokenId, pipelineSignal, activeScenario, headOverrides]);
-
-  const activeCategory = useMemo(() => {
-    const active = [...processedFFN].sort((a,b) => b.activation - a.activation)[0];
-    return (active && active.activation >= mlpThreshold) ? active.label : "Keine Dominanz";
-  }, [processedFFN, mlpThreshold]);
+  }, [activeFFN, activeAttention, sourceTokenId, headOverrides, activeProfileId, mlpThreshold]);
 
   const getInspectorData = (cat) => ({
     title: `🧠 Wissens-Extraktion: ${cat.label}`,
@@ -94,16 +87,18 @@ const Phase3_FFN = ({ simulator, setHoveredItem, theme, activeScenario }) => {
     data: {
       "--- Mechanik": "---",
       "Status": cat.isActuallyActive ? "AKTIVIERT" : "UNTERDRÜCKT",
-      "Signal-Einfluss": isCritical ? "KRITISCH (Rauschen)" : isDegraded ? "GEDÄMPFT" : "OPTIMAL",
+      "Signal-Stärke": cat.debugHeadVal.toFixed(2),
+      "Berechneter Faktor": cat.currentWeight?.toFixed(2),
       "--- Mathematik": "---",
       "Netz-Spannung": (cat.activation * 100).toFixed(1) + "%",
-      "Slider-Einfluss": ((cat.currentWeight || 1) * 100).toFixed(0) + "%",
-      "--- Erkenntnis": "---",
-      "Information": cat.isActuallyActive 
-        ? `Das FFN-Netzwerk erkennt das Muster durch die Verstärkung der relevanten Attention-Heads.` 
-        : `Die aktuelle Attention-Gewichtung reicht nicht aus, um dieses Wissensgebiet zu aktivieren.`
+      "MLP-Gate": mlpThreshold.toFixed(2)
     }
   });
+
+  const activeCategory = useMemo(() => {
+    const active = [...processedFFN].sort((a, b) => b.activation - a.activation)[0];
+    return (active && active.activation >= mlpThreshold) ? active.label : "Keine Dominanz";
+  }, [processedFFN, mlpThreshold]);
 
   useEffect(() => {
     if (selectedLabel) {
@@ -111,19 +106,6 @@ const Phase3_FFN = ({ simulator, setHoveredItem, theme, activeScenario }) => {
       if (cat) setHoveredItem(getInspectorData(cat));
     }
   }, [processedFFN, mlpThreshold, selectedLabel]);
-
-  const handleCategoryClick = (cat, e) => {
-    e.stopPropagation();
-    if (selectedLabel === cat.label) {
-      setSelectedLabel(null);
-      setHoveredItem(null);
-    } else {
-      setSelectedLabel(cat.label);
-      setHoveredItem(getInspectorData(cat));
-    }
-  };
-
-  if (!activeFFN || activeFFN.length === 0) return null;
 
   return (
     <PhaseLayout
@@ -136,45 +118,42 @@ const Phase3_FFN = ({ simulator, setHoveredItem, theme, activeScenario }) => {
       ]}
       visualization={
         <div className="w-full h-full flex flex-col justify-center items-center py-4" onClick={() => { setSelectedLabel(null); setHoveredItem(null); }}>
-          
           {isCritical && (
             <div className="absolute top-4 text-[10px] font-black text-red-500 animate-pulse z-50 uppercase tracking-widest">
               ⚠️ High Entropy Interference - Neural Mapping Unstable
             </div>
           )}
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-6 relative">
             {processedFFN.map((cat) => {
               const isSelected = selectedLabel === cat.label;
+              const baseColor = cat.color || "#3b82f6";
               const glitchClass = isCritical && cat.isActuallyActive ? "animate-pulse skew-x-1" : "";
-              const dynamicStyles = getDynamicStyles(cat);
-              
+              const dynamicStyles = {
+                borderColor: !cat.isActuallyActive ? (theme === 'light' ? '#e2e8f0' : 'rgba(255,255,255,0.05)') : baseColor,
+                backgroundColor: !cat.isActuallyActive ? (theme === 'light' ? '#f8fafc' : 'rgba(15, 23, 42, 0.4)') : `${baseColor}15`,
+                color: !cat.isActuallyActive ? (theme === 'light' ? '#cbd5e1' : 'rgba(255,255,255,0.2)') : baseColor,
+                boxShadow: cat.isActuallyActive ? `0 10px 15px -3px ${baseColor}33` : 'none'
+              };
               return (
                 <div key={cat.label} style={dynamicStyles}
                   onMouseEnter={() => !selectedLabel && setHoveredItem(getInspectorData(cat))}
                   onMouseLeave={() => !selectedLabel && setHoveredItem(null)}
-                  className={`relative flex flex-col items-center justify-center p-8 rounded-2xl border-2 transition-all duration-500 cursor-pointer overflow-hidden ${!cat.isActuallyActive ? 'grayscale opacity-40' : ''} ${isSelected ? 'ring-2 ring-white scale-105 z-20' : 'z-10'} ${glitchClass}`}
-                  onClick={(e) => handleCategoryClick(cat, e)}
+                  className={`relative flex flex-col items-center justify-center p-8 rounded-2xl border-2 transition-all duration-500 cursor-pointer overflow-hidden ${isSelected ? 'ring-2 ring-blue-500 scale-105 z-20' : 'z-10'} ${glitchClass}`}
+                  onClick={(e) => { e.stopPropagation(); setSelectedLabel(isSelected ? null : cat.label); }}
                 >
                   <div className="absolute bottom-0 left-0 w-full transition-all duration-1000 opacity-10 pointer-events-none"
-                    style={{ 
-                      height: `${cat.activation * 100}%`, 
-                      backgroundColor: 'currentColor',
-                      filter: isDegraded ? `blur(${5 * (1 - pipelineSignal)}px)` : 'none'
-                    }} />
-                  
+                    style={{ height: `${cat.activation * 100}%`, backgroundColor: 'currentColor' }} />
                   <div className="z-10 text-[10px] font-black uppercase tracking-widest text-center px-2">{cat.label}</div>
                   <div className="z-10 text-[9px] font-mono mt-2 opacity-60">{(cat.activation * 100).toFixed(0)}% Active</div>
-                  
-                  {cat.isActuallyActive && <div className="absolute top-4 right-4 text-xl transition-all duration-500">
-                    {cat.label.includes("Wissenschaft") && "🔬"}
-                    {cat.label.includes("Funktional") && "⚙️"}
-                    {cat.label.includes("Sozial") && "🤝"}
-                    {cat.label.includes("Evolution") && "🦴"}
-                    {!["Wissenschaft", "Funktional", "Sozial", "Evolution"].some(s => cat.label.includes(s)) && "🧠"}
-                  </div>}
-
-                  <div className={`absolute top-4 left-4 w-1.5 h-1.5 rounded-full ${cat.isActuallyActive ? 'bg-current shadow-[0_0_10px_currentColor]' : 'bg-slate-800'}`} />
+                  {cat.isActuallyActive && (
+                    <div className="absolute top-4 right-4 text-xl">
+                      {cat.label.includes("Geographie") && "🌍"}
+                      {cat.label.includes("Wissenschaft") && "🔬"}
+                      {cat.label.includes("Funktional") && "⚙️"}
+                      {cat.label.includes("Sozial") && "🤝"}
+                      {cat.label.includes("Nonsense") && "🥴"}
+                    </div>
+                  )}
                 </div>
               );
             })}
