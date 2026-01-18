@@ -1,137 +1,146 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import PhaseLayout from './../PhaseLayout';
 
-const Phase4_Decoding = ({ simulator, setHoveredItem, theme }) => {
+const Phase4_Decoding = ({ simulator, setHoveredItem, theme, activeScenario }) => {
   const { 
-    temperature, 
-    setTemperature, 
-    finalOutputs, 
-    activeAttention, 
-    setSelectedToken,
-    mlpThreshold,
-    activeFFN,
-    noise
+    temperature, setTemperature, finalOutputs, activeAttention, 
+    setSelectedToken, mlpThreshold, activeFFN, noise, 
+    headOverrides, activeProfileId, sourceTokenId 
   } = simulator;
   
   const [selectedLabel, setSelectedLabel] = useState(null);
   const [topK, setTopK] = useState(5); 
-  const [minPThreshold, setMinPThreshold] = useState(0.07);
-  
-  const [simulationState, setSimulationState] = useState({
-    outputs: [],
-    winner: null
-  });
+  const [minPThreshold, setMinPThreshold] = useState(0.05); 
+  const [simulationState, setSimulationState] = useState({ outputs: [], winner: null });
+  const [isShuffling, setIsShuffling] = useState(false);
 
-  const pipelineSignal = activeAttention?.avgSignal || 1.0;
-  const isCritical = pipelineSignal < 0.4;
-
-  // INTELLIGENTE FARB-ERBUNG & ICON-ZUWEISUNG:
   const getItemVisuals = (item) => {
     const matchingCategory = activeFFN?.find(cat => cat.label === item.type);
     const color = item?.color || matchingCategory?.color || "#475569";
-    
-    // Icons basierend auf dem Typ (analog zu Phase 3)
     let icon = "📄";
-    if (item.type?.includes("Wissenschaft") || item.type?.includes("Scientific")) icon = "🔬";
-    if (item.type?.includes("Sozial") || item.type?.includes("Social")) icon = "🤝";
-    if (item.type?.includes("Funktional") || item.type?.includes("Functional")) icon = "⚙️";
-    if (item.type?.includes("Evolution") || item.type?.includes("Ancestral")) icon = "🦴";
-    
+    if (item.type?.includes("Wissenschaft")) icon = "🔬";
+    if (item.type?.includes("Sozial")) icon = "🤝";
+    if (item.type?.includes("Funktional")) icon = "⚙️";
+    if (item.type?.includes("Evolution")) icon = "🦴";
     return { color, icon };
   };
 
-  const runSimulation = useCallback(() => {
-    if (!finalOutputs || finalOutputs.length === 0) return;
+  // KERN-LOGIK: Berechnung der Wahrscheinlichkeiten ohne Side-Effects
+  const calculateLogic = useCallback(() => {
+    if (!finalOutputs || finalOutputs.length === 0) return null;
 
-    const T = Math.max(0.01, temperature);
+    const storageKey = activeScenario ? `sim_overrides_${activeScenario.id}` : 'sim_overrides_temp';
+    let savedData = {};
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (raw) savedData = JSON.parse(raw);
+    } catch (e) {}
 
-    const calculated = finalOutputs.map(out => {
-      // 1. FFN Filter (Gatekeeper aus Phase 3)
-      const ffnCat = activeFFN?.find(f => f.label === out.type);
-      const isBlockedByMLP = ffnCat ? ffnCat.activation < mlpThreshold : false;
+    const findWeight = (headNum) => {
+      const entries = Object.entries(savedData);
+      const matchingEntry = entries.find(([key]) => key.startsWith(`${activeProfileId}_`) && key.endsWith(`_h${headNum}`));
+      if (matchingEntry) return parseFloat(matchingEntry[1]);
+      if (headOverrides) {
+        const stateEntry = Object.entries(headOverrides).find(([key]) => key.startsWith(`${activeProfileId}_`) && key.endsWith(`_h${headNum}`));
+        if (stateEntry) return parseFloat(stateEntry[1]);
+      }
+      return 0.7;
+    };
+
+    const wLogik = findWeight(3);
+    const wSemantik = findWeight(1);
+    const wSyntax = findWeight(2);
+    const T = Math.max(0.01, parseFloat(temperature) || 0.7);
+
+    const calculated = finalOutputs.map(item => {
+      const ffnCat = activeFFN?.find(f => f.label === item.type);
+      const baseActivation = ffnCat ? ffnCat.activation : 0.5;
+      const typeLabel = (item.type || "").toLowerCase();
       
-      // 2. Noise Modulation
-      const sensitivity = out.noise_sensitivity || 0;
-      const noiseImpact = Math.exp(-(sensitivity * (noise || 0)));
+      let factor = 1.0;
+      if (typeLabel.includes("funktional")) factor = wLogik / 0.7;
+      else if (typeLabel.includes("wissenschaft")) factor = ((wSemantik + wSyntax) / 2) / 0.7;
 
-      // 3. Modifizierter Logit
-      const baseLogit = out.logit !== undefined ? out.logit : Math.log(out.probability + 0.0001);
-      const effectiveLogit = isBlockedByMLP ? -100 : baseLogit * noiseImpact;
+      const liveActivation = baseActivation * factor;
+      const ffnBias = (liveActivation - 0.5) * 12; 
+      const jitter = (Math.random() - 0.5) * (noise || 0) * 2.5;
+
+      const baseLogit = item.logit !== undefined ? item.logit : Math.log(item.probability + 0.0001);
+      const effectiveLogit = baseLogit + ffnBias + jitter;
 
       return { 
-        ...out, 
-        effectiveLogit,
-        isBlockedByMLP,
+        ...item, 
+        effectiveLogit, 
+        liveActivation,
+        isBlockedByMLP: liveActivation < mlpThreshold,
+        ffnBoost: ffnBias,
         exp: Math.exp(effectiveLogit / T) 
       };
     });
 
     const sum = calculated.reduce((acc, curr) => acc + curr.exp, 0);
-
-    const probabilities = calculated.map(out => ({
-      ...out,
-      dynamicProb: sum > 0 ? out.exp / sum : 0
+    const probabilities = calculated.map(item => ({
+      ...item,
+      dynamicProb: sum > 0 ? item.exp / sum : 0
     }));
 
-    let winner = probabilities[0];
-    const r = Math.random();
-    let cumulative = 0;
+    const sorted = [...probabilities].sort((a, b) => b.dynamicProb - a.dynamicProb);
+    return sorted;
+  }, [finalOutputs, temperature, mlpThreshold, activeFFN, noise, headOverrides, activeProfileId, activeScenario]);
 
-    for (let i = 0; i < probabilities.length; i++) {
-      cumulative += probabilities[i].dynamicProb;
-      if (r <= cumulative) {
-        winner = probabilities[i];
-        break;
+  // Funktion für das manuelle Re-Sampling (mit Shuffle-Effekt)
+  const triggerResample = () => {
+    setIsShuffling(true);
+    setTimeout(() => {
+      const results = calculateLogic();
+      if (results) {
+        let winnerCandidate = results[0];
+        const r = Math.random();
+        let cumulative = 0;
+        for (let i = 0; i < results.length; i++) {
+          cumulative += results[i].dynamicProb;
+          if (r <= cumulative) { winnerCandidate = results[i]; break; }
+        }
+        setSimulationState({ outputs: results.slice(0, 10), winner: winnerCandidate });
+        if (setSelectedToken) setSelectedToken(winnerCandidate);
+      }
+      setIsShuffling(false);
+    }, 450);
+  };
+
+  // Effekt für Slider-Änderungen: Berechnet sofort, aber OHNE Shuffle
+  useEffect(() => {
+    const results = calculateLogic();
+    if (results) {
+      // Wenn wir nur Parameter ändern, wählen wir meist den Top-Kandidaten als Winner
+      // außer es läuft gerade ein Shuffle
+      if (!isShuffling) {
+        setSimulationState({ outputs: results.slice(0, 10), winner: results[0] });
+        if (setSelectedToken) setSelectedToken(results[0]);
       }
     }
+  }, [calculateLogic, activeScenario, activeProfileId, sourceTokenId]);
 
-    const sortedForDisplay = [...probabilities].sort((a, b) => b.dynamicProb - a.dynamicProb);
-
-    setSimulationState({
-      outputs: sortedForDisplay.slice(0, 10),
-      winner: winner
-    });
-
-    if (setSelectedToken) {
-        setSelectedToken(winner);
-    }
-  }, [finalOutputs, temperature, setSelectedToken, mlpThreshold, activeFFN, noise]); 
-
-  useEffect(() => {
-    runSimulation();
-  }, [runSimulation]);
+  // Prüfen, wie viele Optionen mathematisch "aktiv" sind
+  const activeOptionsCount = useMemo(() => {
+    return simulationState.outputs.filter((out, i) => 
+      i < topK && out.dynamicProb >= minPThreshold && !out.isBlockedByMLP
+    ).length;
+  }, [simulationState.outputs, topK, minPThreshold]);
 
   const getInspectorData = (out, index) => {
-    const isTopK = index < topK;
-    const isAboveThreshold = out.dynamicProb >= minPThreshold;
     const { icon } = getItemVisuals(out);
-    let statusText = out.isBlockedByMLP ? "Blockiert (MLP)" : (isTopK ? (isAboveThreshold ? "Aktiv" : "Gefiltert (Min-P)") : "Gefiltert (Top-K)");
-    
     return {
       title: `${icon} Decoding: ${out.label}`,
-      subtitle: `Kategorie: ${out.type || 'Standard'}`,
+      subtitle: `Kategorie: ${out.type}`,
       data: {
-        "--- Softmax-Status": "---",
-        "Logit (Effektiv)": out.effectiveLogit?.toFixed(2),
+        "Aktivierung (Live)": (out.liveActivation * 100).toFixed(0) + "%",
+        "Logit-Shift": (out.ffnBoost >= 0 ? "+" : "") + out.ffnBoost?.toFixed(2),
         "Wahrscheinlichkeit": (out.dynamicProb * 100).toFixed(2) + "%",
-        "MLP Gate": out.isBlockedByMLP ? "GESTOPPT" : "PASSIERT",
-        "--- Status": "---",
-        "Auswahl": simulationState.winner?.label === out.label ? "GEWÄHLT" : statusText,
-        "--- Trace": "---",
-        "Info": out.causality_trace || out.explanation
+        "Status": out.isBlockedByMLP ? "BLOCKIERT (MLP)" : (index < topK ? "AKTIV" : "GEFILTERT")
       }
     };
   };
-
-  useEffect(() => {
-    if (selectedLabel && simulationState.outputs.length > 0) {
-      const found = simulationState.outputs.find(o => o.label === selectedLabel);
-      if (found) {
-        const index = simulationState.outputs.indexOf(found);
-        setHoveredItem(getInspectorData(found, index));
-      }
-    }
-  }, [simulationState, selectedLabel, setHoveredItem]);
 
   return (
     <PhaseLayout
@@ -139,87 +148,61 @@ const Phase4_Decoding = ({ simulator, setHoveredItem, theme }) => {
       subtitle="Physikalische Signal-Modulation & Sampling"
       theme={theme}
       badges={[
-        { text: `Noise: ${(noise || 0).toFixed(2)}`, className: noise > 1 ? "text-orange-400" : "text-slate-400" },
-        { text: `MLP Filter: ${mlpThreshold.toFixed(2)}`, className: "text-blue-400 border-blue-500/30" }
+        { text: `Entropy: ${(noise || 0).toFixed(2)}`, className: noise > 1 ? "text-red-500 font-bold border-red-500/20" : "text-slate-400 border-white/5" },
+        { text: `MLP Filter: ${mlpThreshold.toFixed(2)}`, className: "text-blue-500 font-bold border-blue-500/20" }
       ]}
       visualization={
-        <div className="flex flex-row h-[380px] lg:h-full w-full gap-4 relative" onClick={() => { setSelectedLabel(null); setHoveredItem(null); }}>
-          
-          <div className="flex flex-col justify-between items-end pb-10 pt-4 text-[8px] font-black text-slate-600 w-8 shrink-0 select-none">
-            <span>100%</span>
-            <span>50%</span>
-            <span className="text-slate-800 text-[10px]">0%</span>
+        <div className="flex flex-row h-full w-full gap-4 relative pt-12 px-2" onClick={() => { setSelectedLabel(null); setHoveredItem(null); }}>
+          <div className={`flex flex-col justify-between items-end pb-10 pt-4 text-[8px] font-black w-8 shrink-0 ${theme === 'light' ? 'text-slate-500' : 'text-slate-600'}`}>
+            <span>1.0</span><span>0.5</span><span className={theme === 'light' ? 'text-slate-900' : 'text-slate-300'}>0.0</span>
           </div>
 
-          <div className="relative flex-1 h-full flex flex-col justify-end group/chart">
-            
+          <div className="relative flex-1 h-full flex flex-col justify-end">
             <div className="absolute inset-0 pb-10 pt-4 pointer-events-none opacity-20">
-              <div className="absolute top-4 left-0 w-full border-t border-white/10"></div>
-              <div className="absolute top-1/2 left-0 w-full border-t border-white/10"></div>
-              <div className="absolute bottom-10 left-0 w-full border-t border-slate-700"></div>
+              <div className={`absolute top-4 w-full border-t ${theme === 'light' ? 'border-slate-500' : 'border-white/10'}`} />
+              <div className={`absolute top-1/2 w-full border-t ${theme === 'light' ? 'border-slate-500' : 'border-white/10'}`} />
+              <div className={`absolute bottom-10 w-full border-t-2 ${theme === 'light' ? 'border-slate-900' : 'border-slate-700'}`} />
             </div>
 
-            <div 
-              className="absolute left-0 w-full border-t border-dashed border-red-500/40 z-20 transition-all duration-500 pointer-events-none"
-              style={{ bottom: `calc(${(minPThreshold * 85)}% + 40px)` }} 
-            >
-              <div className="absolute right-0 -top-2 px-1.5 py-0.5 bg-slate-900 rounded border border-red-500/20 text-[6px] text-red-500 font-black tracking-widest uppercase">
-                Quality Gate (Min-P)
+            <div className="absolute left-0 w-full border-t-2 border-dashed border-red-500 z-30 transition-all duration-500 pointer-events-none"
+                 style={{ bottom: `calc(${(minPThreshold * 85)}% + 40px)` }}>
+              <div className="absolute right-0 -top-2.5 px-1.5 py-0.5 bg-red-600 text-[7px] text-white rounded font-black uppercase shadow-lg">
+                Gate: {(minPThreshold * 100).toFixed(0)}%
               </div>
             </div>
 
             <div className="relative flex items-end justify-around gap-1 lg:gap-2 h-full pb-10">
               {simulationState.outputs.map((out, i) => {
+                const isWinner = simulationState.winner?.label === out.label;
                 const isTopK = i < topK;
-                const isSelected = selectedLabel === out.label;
-                const isWinner = simulationState.winner && out.label === simulationState.winner.label;
                 const isAboveThreshold = out.dynamicProb >= minPThreshold;
                 const isActive = isTopK && isAboveThreshold && !out.isBlockedByMLP;
-                const { color: barColor, icon } = getItemVisuals(out);
+                const { color, icon } = getItemVisuals(out);
 
                 return (
-                  <div 
-                    key={i} 
-                    className={`relative flex flex-col items-center flex-1 h-full justify-end group cursor-pointer transition-all duration-500 ${
-                      isSelected ? 'scale-105 z-30' : 'z-10'
-                    } ${!isActive ? 'opacity-20 grayscale' : 'opacity-100'}`}
+                  <div key={i} className={`relative flex flex-col items-center flex-1 h-full justify-end transition-all duration-500 ${selectedLabel === out.label ? 'z-30' : 'z-10'} ${(!isActive && !isWinner) ? 'opacity-30 grayscale' : 'opacity-100'}`}
                     onMouseEnter={() => !selectedLabel && setHoveredItem(getInspectorData(out, i))}
                     onMouseLeave={() => !selectedLabel && setHoveredItem(null)}
                     onClick={(e) => { e.stopPropagation(); setSelectedLabel(out.label); }}
                   >
-                    {out.isBlockedByMLP && <div className="absolute top-0 text-[8px] opacity-50">🚫</div>}
-
-                    <div className="mb-1 text-[10px] filter drop-shadow-sm">{icon}</div>
-
-                    <span className={`text-[7px] font-mono mb-1 transition-colors ${
-                      isActive ? (isSelected ? 'text-white font-black' : 'text-slate-400') : 'text-slate-800'
-                    }`}>
-                      {(out.dynamicProb * 100).toFixed(0)}%
+                    {isWinner && !isShuffling && (
+                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 text-[20px] animate-bounce z-40 bg-slate-900/50 rounded-full p-1 border border-white/20 shadow-xl">
+                        {noise > 1.2 ? '🥴' : '🎯'}
+                      </div>
+                    )}
+                    {out.isBlockedByMLP && !isWinner && <div className="absolute top-0 text-[10px] z-20">🚫</div>}
+                    <div className="mb-1 text-[10px]">{icon}</div>
+                    <span className={`text-[8px] font-black mb-1 ${(isActive || isWinner) ? (theme === 'light' ? 'text-slate-900' : 'text-blue-400') : 'text-slate-500'}`}>
+                      {isShuffling ? (Math.random() * 100).toFixed(0) : (out.dynamicProb * 100).toFixed(0)}%
                     </span>
-                    
-                    <div 
-                      className={`w-full max-w-[36px] rounded-t-md transition-all duration-300 relative ${
-                        isSelected ? 'ring-2 ring-white shadow-2xl' : 'border border-transparent'
-                      } ${isCritical && isActive ? 'animate-pulse' : ''}`}
+                    <div className={`w-full max-w-[40px] rounded-t-lg transition-all duration-300 ${isWinner && !isShuffling ? 'ring-2 ring-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]' : ''} ${isShuffling ? 'animate-pulse opacity-50' : ''}`}
                       style={{ 
-                        height: `${out.dynamicProb * 85}%`,
-                        backgroundColor: isActive ? barColor : '#1e293b',
-                        boxShadow: isWinner ? `0 0 20px ${barColor}60` : 'none'
+                        height: isShuffling ? `${Math.random() * 85}%` : `${out.dynamicProb * 85}%`, 
+                        backgroundColor: (isActive || isWinner) ? color : (theme === 'light' ? '#cbd5e1' : '#334155') 
                       }}
-                    >
-                      {isWinner && (
-                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[12px] animate-bounce z-30">
-                          {noise > 1.2 ? '🥴' : '🎯'}
-                        </div>
-                      )}
-                    </div>
-                    
+                    />
                     <div className="absolute top-full pt-2 w-full text-center">
-                      <span className={`text-[8px] lg:text-[9px] uppercase tracking-tighter block truncate px-0.5 ${
-                        isWinner ? 'font-black text-blue-400' : 'font-medium text-slate-500'
-                      }`}>
-                        {out.label}
-                      </span>
+                      <span className={`text-[9px] uppercase tracking-tighter block truncate px-0.5 ${isWinner ? 'font-black text-blue-600' : (theme === 'light' ? 'text-slate-800' : 'text-slate-500')}`}>{out.label}</span>
                     </div>
                   </div>
                 );
@@ -228,42 +211,48 @@ const Phase4_Decoding = ({ simulator, setHoveredItem, theme }) => {
           </div>
         </div>
       }
-      controls={
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full">
-          <div className="px-3 py-2 bg-slate-900/80 rounded-lg border border-white/5">
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-[8px] uppercase font-black text-blue-500 tracking-widest leading-none">Creativity (Temp)</label>
-              <div className="text-[10px] font-mono font-black text-blue-400">{temperature.toFixed(2)}</div>
-            </div>
-            <input type="range" min="0.1" max="2.0" step="0.1" value={temperature} onChange={(e) => setTemperature(parseFloat(e.target.value))} className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+      controls={[
+        <div key="c-1" className={`${theme === 'light' ? 'bg-white border-slate-200' : 'bg-slate-900 border-white/5'} px-4 py-3 rounded-xl border flex flex-col justify-center h-full`}>
+          <div className="flex justify-between items-center mb-2">
+            <label className="text-[9px] uppercase font-black text-blue-500 tracking-widest">Creativity (Temp)</label>
+            <div className="text-xs font-mono font-black text-blue-500">{temperature.toFixed(2)}</div>
           </div>
-
-          <div className="px-3 py-2 bg-slate-900/80 rounded-lg border border-white/5">
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-[8px] uppercase font-black text-green-500 tracking-widest leading-none">Filter (Top-K)</label>
-              <div className="text-[10px] font-mono font-black text-green-400">{topK}</div>
-            </div>
-            <input type="range" min="1" max="10" step="1" value={topK} onChange={(e) => setTopK(parseInt(e.target.value))} className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-green-500" />
+          <input type="range" min="0.1" max="2.0" step="0.1" value={temperature} onChange={(e) => setTemperature(parseFloat(e.target.value))} className="w-full h-1.5 bg-slate-400/20 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+        </div>,
+        <div key="c-2" className={`${theme === 'light' ? 'bg-white border-slate-200' : 'bg-slate-900 border-white/5'} px-4 py-3 rounded-xl border flex flex-col justify-center h-full`}>
+          <div className="flex justify-between items-center mb-2">
+            <label className="text-[9px] uppercase font-black text-green-600 tracking-widest">Filter (Top-K)</label>
+            <div className="text-xs font-mono font-black text-green-600">{topK}</div>
           </div>
-
-          <div className="px-3 py-2 bg-slate-900/80 rounded-lg border border-white/5">
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-[8px] uppercase font-black text-red-500 tracking-widest leading-none">Min-P Quality</label>
-              <div className="text-[10px] font-mono font-black text-red-400">{(minPThreshold * 100).toFixed(0)}%</div>
-            </div>
-            <input type="range" min="0.01" max="0.25" step="0.01" value={minPThreshold} onChange={(e) => setMinPThreshold(parseFloat(e.target.value))} className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-red-500" />
+          <input type="range" min="1" max="10" step="1" value={topK} onChange={(e) => setTopK(parseInt(e.target.value))} className="w-full h-1.5 bg-slate-400/20 rounded-lg appearance-none cursor-pointer accent-green-600" />
+        </div>,
+        <div key="c-3" className={`${theme === 'light' ? 'bg-white border-slate-200' : 'bg-slate-900 border-white/5'} px-4 py-3 rounded-xl border flex flex-col justify-center h-full`}>
+          <div className="flex justify-between items-center mb-2">
+            <label className="text-[9px] uppercase font-black text-red-600 tracking-widest">Min-P Quality</label>
+            <div className="text-xs font-mono font-black text-red-600">{(minPThreshold * 100).toFixed(0)}%</div>
           </div>
-
-          <div className="flex flex-col justify-end pb-1">
-            <button 
-              onClick={runSimulation} 
-              className="w-full py-2 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-300 rounded text-[9px] font-bold uppercase tracking-widest transition-colors"
-            >
-              🎲 Re-Sample
-            </button>
-          </div>
+          <input type="range" min="0.01" max="0.25" step="0.01" value={minPThreshold} onChange={(e) => setMinPThreshold(parseFloat(e.target.value))} className="w-full h-1.5 bg-slate-400/20 rounded-lg appearance-none cursor-pointer accent-red-600" />
+        </div>,
+        <div key="c-4" className="h-full">
+          <button
+            disabled={isShuffling || activeOptionsCount <= 1}
+            onClick={triggerResample}
+            className={`w-full h-full min-h-[56px] rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg transition-all flex flex-col items-center justify-center gap-1 border-2
+            ${(isShuffling || activeOptionsCount <= 1) 
+              ? 'bg-slate-800 text-slate-500 border-transparent cursor-not-allowed opacity-50' 
+              : 'bg-blue-600 text-white hover:bg-blue-700 border-blue-500/50'}`}
+          >
+            {isShuffling ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                <span className="text-sm">🎲 Re-Sample</span>
+                {activeOptionsCount <= 1 && <span className="text-[7px] opacity-60">Deterministisch</span>}
+              </>
+            )}
+          </button>
         </div>
-      }
+      ]}
     />
   );
 };
