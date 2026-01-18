@@ -8,14 +8,22 @@
 
 ### Lernziel
 
-Dieses Szenario demonstriert die **vertikale Kausalität** und den **Kipppunkt der Logik**. Nutzer lernen, wie das Modell zwischen faktischer Korrektheit und strukturellem Nonsense schwankt. Es wird visualisiert, dass eine Halluzination (Bananen-Republik) dann entsteht, wenn die logische Attention-Kette (Phase 2) nicht genug Energie in die korrekte Wissens-Kategorie (Phase 3) leitet, um das MLP-Gate zu passieren.
+Dieses Szenario visualisiert den **Kipppunkt der Logik**. Nutzer lernen:
+
+1. Wie Faktenwissen in einem Transformer aktiv durch Attention-Signale "wachgeküsst" werden muss.
+2. Dass eine Halluzination (Bananen-Republik) kein technischer Fehler ist, sondern das Ergebnis eines zu schwachen Logik-Signals, das am **MLP-Gate (Phase 3)** scheitert.
+3. Wie **Positional Encodings** sicherstellen, dass das Modell weiß, dass "Frankreich" das Bezugswort für "ist" ist.
 
 ## 2. Technische Logik: Die Kausalitäts-Brücke
 
-Das Szenario ist so kalibriert, dass der Nutzer den Ausgang des Satzes aktiv steuern kann:
+1. **Phase 1 (Embedding):** Die Positions-Vektoren bilden die lineare Satzstruktur ab. Ohne den **Position Weight Slider** verliert das Modell den Bezug zwischen der Entität (Frankreich) und der Abfrage (ist).
+2. **Phase 2 (Attention):** Head 3 (Logik) fungiert als Fakten-Extraktor. Er leitet die Aufmerksamkeit vom Wort "ist" (ID 4) zurück auf "Frankreich" (ID 3).
+3. **Phase 3 (FFN):** Die allgemeine Logik verknüpft:
+* `Geographie`  **Head 3** (Logik/Fakten).
+* `Zufall/Nonsense`  **Head 4** (Struktur/Rauschen).
 
-1. **Faktischer Pfad:** Head 3 (Logik) verknüpft das Verb "ist" mit dem Anker "Frankreich". Bei hoher slider-Stärke erreicht die Kategorie "Geographie" eine Aktivierung von **> 50%**, was in Phase 4 zu einem positiven Logit-Shift führt.
-2. **Halluzinations-Pfad:** Bei Deaktivierung von Head 3 fällt die Aktivierung unter das **MLP-Gate (20%)**. Das Wort "Paris" wird physikalisch blockiert, und der Decoder normiert die "Bananen-Republik" auf 100%.
+
+4. **Phase 4 (Decoding):** Wenn `Geographie` in Phase 3 über 50% steigt, erhält "Paris" einen massiven Logit-Boost. Sinkt der Wert unter das MLP-Gate (20%), übernimmt der Nonsense-Pfad.
 
 ## 3. Vollständiges Szenario-JSON (`scenarios.json`)
 
@@ -24,45 +32,33 @@ Das Szenario ist so kalibriert, dass der Nutzer den Ausgang des Satzes aktiv ste
   "id": "hallucination-lab-001",
   "name": "Halluzinations-Labor: Der Logik-Verlust",
   "input_prompt": "Die Hauptstadt von Frankreich ist",
-  "explanation": "Dieses Szenario demonstriert die Kausalitätskette: Wie ein starkes Attention-Signal (Phase 2) die Wissens-Kategorie (Phase 3) über den 50%-Kipppunkt hebt, um im Decoder (Phase 4) eine Fakten-Antwort gegen das Rauschen durchzusetzen.",
+  "explanation": "Steuerung: Head 3 (Logik) für Fakten, Head 4 (Struktur) für Rauschen.",
   "phase_0_tokenization": {
     "tokens": [
-      { "id": "0", "text": "Die", "explanation": "Artikel (Neutral)" },
-      { "id": "1", "text": "Hauptstadt", "explanation": "Semantischer Anker für Geographie." },
-      { "id": "2", "text": "von", "explanation": "Relationale Präposition." },
-      { "id": "3", "text": "Frankreich", "explanation": "Ziel-Entität (Faktisches Wissen)." },
-      { "id": "4", "text": "ist", "explanation": "Kausale Query (ist -> ?)" }
+      { "id": "0", "text": "Die" },
+      { "id": "1", "text": "Hauptstadt" },
+      { "id": "2", "text": "von" },
+      { "id": "3", "text": "Frankreich" },
+      { "id": "4", "text": "ist" }
     ]
   },
   "phase_1_embedding": {
     "token_vectors": [
-      { "token_index": 0, "base_vector": [0.1, 0.1], "positional_vector": [0.0, 0.1] },
-      { "token_index": 1, "base_vector": [0.4, 0.5], "positional_vector": [0.1, 0.1] },
-      { "token_index": 2, "base_vector": [0.2, 0.2], "positional_vector": [0.2, 0.1] },
-      { "token_index": 3, "base_vector": [0.8, 0.8], "positional_vector": [0.3, 0.1] },
-      { "token_index": 4, "base_vector": [0.1, 0.1], "positional_vector": [0.4, 0.1] }
+      { "token_index": 0, "base_vector": [0.1, 0.1], "positional_vector": [-0.4, 0.0] },
+      { "token_index": 1, "base_vector": [0.4, 0.5], "positional_vector": [-0.2, 0.0] },
+      { "token_index": 2, "base_vector": [0.2, 0.2], "positional_vector": [0.0, 0.0] },
+      { "token_index": 3, "base_vector": [0.8, 0.8], "positional_vector": [0.2, 0.0] },
+      { "token_index": 4, "base_vector": [0.1, 0.1], "positional_vector": [0.4, 0.0] }
     ]
   },
   "phase_2_attention": {
     "attention_profiles": [
       {
         "id": "entropy-mode",
-        "label": "Kontext: Instabile Logik",
+        "label": "Kontext: Fakten-Check",
         "rules": [
-          {
-            "head": 3,
-            "source": "4",
-            "target": "3",
-            "strength": 0.95,
-            "explanation": "Logik: Starke Kontext-Leitung zu 'Frankreich'."
-          },
-          {
-            "head": 4,
-            "source": "4",
-            "target": "0",
-            "strength": 0.30,
-            "explanation": "Struktur: Reduziertes Grundrauschen für klarere Effekte."
-          }
+          { "head": 3, "source": "4", "target": "3", "strength": 1.4 },
+          { "head": 4, "source": "4", "target": "0", "strength": 0.5 }
         ]
       }
     ]
@@ -72,50 +68,35 @@ Das Szenario ist so kalibriert, dass der Nutzer den Ausgang des Satzes aktiv ste
       {
         "ref_profile_id": "entropy-mode",
         "activations": [
-          {
-            "label": "Geographie",
-            "activation": 0.80,
-            "color": "#3b82f6"
-          },
-          {
-            "label": "Zufall/Nonsense",
-            "activation": 0.40,
-            "color": "#f97316"
-          }
+          { "label": "Geographie", "activation": 0.50, "linked_head": 3, "color": "#3b82f6" },
+          { "label": "Zufall/Nonsense", "activation": 0.50, "linked_head": 4, "color": "#f97316" }
         ]
       }
     ]
   },
   "phase_4_decoding": {
     "outputs": [
-      {
-        "label": "Paris",
-        "logit": 5.0,
-        "type": "Geographie",
-        "causality_trace": "Wird durch Logik-Aktivierung >50% massiv verstärkt."
-      },
-      {
-        "label": "Bananen-Republik",
-        "logit": 5.0,
-        "type": "Zufall/Nonsense",
-        "causality_trace": "Standard-Ausgabe, sinkt bei logischem Fokus."
-      }
+      { "label": "Paris", "logit": 5.0, "type": "Geographie" },
+      { "label": "Bananen-Republik", "logit": 5.0, "type": "Zufall/Nonsense" }
     ]
   }
 }
 
 ```
 
-## 4. Test-Szenarien & Erwartetes Verhalten
+## 4. Test-Szenarien & Labor-Protokoll
 
-| Testfall | UI-Eingriff (Phase 2/3) | Effekt (Phase 3) | Vorhersage (Phase 4) | Erwartetes Ergebnis |
-| --- | --- | --- | --- | --- |
-| **A: Logik-Sieg** | Head 3 Slider auf **1.0** | Geographie  | **Paris** (75-90%) | Fakten setzen sich durch. |
-| **B: MLP-Blockade** | Head 3 Slider auf **0.1** | Geographie  | **Bananen-Republik** | Paris wird hart gefiltert. |
-| **C: Rauschen** | Temp auf **1.5** + Slider 0.7 | Diffuse Verteilung | **🎲 Wechselnd** | Modell schwankt zwischen Wahrheit und Halluzination. |
+| Testfall | UI-Eingriff | Effekt Phase 3 | Resultat Phase 4 |
+| --- | --- | --- | --- |
+| **A: Fakten-Sieg** | Wort **"ist"** wählen, **Head 3 auf Max** | Geographie leuchtet blau (>50%) | **Paris** gewinnt mit hoher Konfidenz. |
+| **B: Logik-Verlust** | **Head 3 auf 0.1** reduzieren | Geographie sinkt unter 20% | **Bananen-Republik** übernimmt (Halluzination). |
+| **C: Positions-Chaos** | **Position Weight Slider auf 0.0** | Räumliche Trennung in Phase 1 verschwindet | Attention-Linien in Phase 2 wirken "flacher", Fokus geht verloren. |
+| **D: Rausch-Modus** | **Head 4 auf Max**, Temp auf 1.2 | Nonsense-Kategorie dominiert | Instabile Vorhersage, Modell "erfindet" Begriffe. |
 
-## 5. UI/UX Features des Szenarios
+## 5. UI/UX Highlights für dieses Szenario
 
-* **Interaktive Kausalität:** Der Nutzer kann live zusehen, wie Paris im Decoder erscheint oder verschwindet, wenn der Schwellenwert in Phase 3 die 20%-Marke unter- oder überschreitet.
-* **Inspektor-Feedback:** Bei Auswahl von Paris im Decoder zeigt der Inspektor den Einfluss von "Head 3 (Logik)" und den resultierenden Logit-Shift an.
-* **Resampling-Dynamik:** Bei mittleren Einstellungen (75% Paris) erlaubt der "🎲 Re-Sample" Button die Demonstration des probabilistischen Charakters – gelegentlich "gewinnt" die Bananen-Republik trotz logischer Anbindung.
+* **Der "Kipppunkt":** Man kann beobachten, wie die Kategorie "Geographie" erst grau ist und bei ca. 0.6 Slider-Stärke (Head 3) plötzlich farbig (aktiv) wird. In diesem Moment springt die Wahrscheinlichkeit im Decoder schlagartig auf Paris um.
+* **Entropie-Visualisierung:** Durch Erhöhen der Temperatur (Phase 4) fangen die Wahrscheinlichkeitsbalken an zu "zittern" – ein Zeichen für die Unsicherheit des Modells bei schwacher Logik-Anbindung.
+* **Inspektor-Analyse:** Bei Klick auf "Paris" zeigt der Inspektor den Pfad: `Frankreich (ID 3) -> Head 3 -> Geographie -> Boost`.
+
+**Dieses Szenario ist nun vollständig kompatibel mit deiner generischen `processedFFN`-Logik. Soll ich als Nächstes "Das Schloss" (Polysemie) finalisieren?**
