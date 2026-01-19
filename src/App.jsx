@@ -59,42 +59,26 @@ function AppContent() {
       .catch(err => console.error("Briefing-Ladefehler:", err));
   }, []);
 
+  // 3. EFFECTS
   useEffect(() => {
-    if (!activeScenario) return;
+    if (!activeScenario || !simulator) return;
 
-    console.log("🔄 Szenario-Wechsel erkannt: Reset auf Defaults für", activeScenario.name);
+    console.log("🔄 Szenario-Wechsel: Globaler Reset auf Defaults für", activeScenario.name);
 
-    // 1. Manuelle Overrides leeren
-    // Wir löschen die Slider-Werte im State, damit die Werte aus dem JSON greifen
-    if (simulator.setHeadOverrides) {
-      simulator.setHeadOverrides({});
+    // Nutze die zentrale Reset-Funktion aus dem Hook
+    if (simulator.resetParameters) {
+      simulator.resetParameters();
     }
 
-    // 2. Globale Parameter auf Standardwerte zurücksetzen
-    // Falls das Szenario keine eigenen Defaults mitbringt, nutzen wir die Standardwerte
-    if (simulator.setTemperature) simulator.setTemperature(0.7);
-    if (simulator.setNoise) simulator.setNoise(0.0);
-    if (simulator.setMlpThreshold) simulator.setMlpThreshold(0.2);
+    // Setze das erste Profil des neuen Szenarios als aktiv
+    const firstProfileId = activeScenario.phase_3_ffn?.activation_profiles?.[0]?.ref_profile_id
+      || activeScenario.phase_2_attention?.attention_profiles?.[0]?.id;
 
-    // 3. Erstes Profil des neuen Szenarios als aktiv setzen
-    const firstProfileId = activeScenario.phase_2_attention?.attention_profiles[0]?.id;
     if (firstProfileId && simulator.setActiveProfileId) {
       simulator.setActiveProfileId(firstProfileId);
     }
 
-    // 4. Standard-Token (Query) auswählen
-    // Meistens ist das zweite Token (Index 1) das spannende Query-Token
-    const defaultTokenId = activeScenario.phase_0_tokenization?.tokens[1]?.id;
-    if (defaultTokenId && simulator.setSourceTokenId) {
-      simulator.setSourceTokenId(defaultTokenId);
-    }
-
-    // 5. SessionStorage-Bereinigung (Optional)
-    // Wenn du möchtest, dass beim Wechsel auch der Speicher geleert wird:
-    // const storageKey = `sim_overrides_${activeScenario.id}`;
-    // sessionStorage.removeItem(storageKey);
-
-  }, [activeScenario?.id]); // Triggert nur, wenn sich die ID des Szenarios ändert
+  }, [activeScenario?.id]);
 
   // Automatischer Scroll nach oben bei Phasenwechsel
   useEffect(() => {
@@ -163,6 +147,7 @@ function AppContent() {
           handleScenarioChange(id);
           if (simulator?.resetParameters) simulator.resetParameters();
         }}
+        onReset={simulator?.resetParameters}
         onRestart={() => {
           setActivePhase(-1);
           setHoveredItem(null);
@@ -208,7 +193,7 @@ function AppContent() {
                     {activePhase === 1 && <Phase1_Embedding simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
                     {activePhase === 2 && <Phase2_Attention simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
                     {activePhase === 3 && <Phase3_FFN simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
-                    {activePhase === 4 && <Phase4_Decoding simulator={simulator} theme={theme} setHoveredItem={setHoveredItem} />}
+                    {activePhase === 4 && <Phase4_Decoding simulator={simulator} activeScenario={activeScenario} theme={theme} setHoveredItem={setHoveredItem} />}
                     {activePhase === 5 && <Phase5_Analysis simulator={simulator} activeScenario={activeScenario} theme={theme} setHoveredItem={setHoveredItem} />}
                   </div>
                 )}

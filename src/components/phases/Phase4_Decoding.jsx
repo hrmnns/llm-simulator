@@ -15,77 +15,121 @@ const Phase4_Decoding = ({ simulator, setHoveredItem, theme, activeScenario }) =
   const [isShuffling, setIsShuffling] = useState(false);
 
   const getItemVisuals = (item) => {
-    const matchingCategory = activeFFN?.find(cat => cat.label === item.type);
-    const color = item?.color || matchingCategory?.color || "#475569";
-    let icon = "📄";
-    const type = (item.type || "").toLowerCase();
-    if (type.includes("geographie")) icon = "🌍";
-    if (type.includes("wissenschaft")) icon = "🔬";
-    if (type.includes("sozial")) icon = "🤝";
-    if (type.includes("funktional")) icon = "⚙️";
-    if (type.includes("poetisch")) icon = "✨";
-    if (type.includes("nonsense") || type.includes("zufall")) icon = "🥴";
-    return { color, icon };
+    // Wir suchen die Kategorie im aktiven FFN, die zum 'type' des Wortes passt
+    const matchingCategory = activeFFN?.find(cat =>
+      cat.label.toLowerCase() === (item.type || "").toLowerCase()
+    );
+
+    return {
+      // Wenn im JSON eine Farbe oder ein Icon definiert ist, nimm das.
+      // Ansonsten nimm Defaults.
+      color: item?.color || matchingCategory?.color || "#475569",
+      icon: item?.icon || matchingCategory?.icon || "📄"
+    };
   };
 
   const calculateLogic = useCallback(() => {
-    if (!finalOutputs || finalOutputs.length === 0) return null;
+    // 1. Hole das Szenario entweder aus der Prop oder direkt vom Simulator
+    const scenario = activeScenario || simulator?.activeScenario;
 
-    const getActiveHeadSignal = (headNum) => {
-      const specificKey = `${activeProfileId}_s${sourceTokenId}_h${headNum}`;
-      const looseKeyPart = `_h${headNum}`;
-      const looseMatch = Object.entries(headOverrides || {}).find(([key]) => 
-        key.startsWith(activeProfileId) && key.endsWith(looseKeyPart)
-      );
-      const slider = headOverrides?.[specificKey] ?? (looseMatch ? parseFloat(looseMatch[1]) : 0.7);
-      const sliderFactor = slider / 0.7;
-      const activeRules = activeAttention?.rules?.filter(r =>
-        String(r.source) === String(sourceTokenId) && Number(r.head) === Number(headNum)
-      ) || [];
-      const rulesSum = activeRules.length > 0 ? activeRules.reduce((acc, r) => acc + parseFloat(r.strength), 0) : 0.30; 
-      return Math.min(1.5, rulesSum * sliderFactor);
-    };
+    if (!finalOutputs || finalOutputs.length === 0 || !scenario) {
+//      console.warn("⚠️ [Phase 4] Warte auf Szenario-Daten...");
+      return null;
+    }
 
-    const sSemantik = getActiveHeadSignal(1);
-    const sSyntax = getActiveHeadSignal(2);
-    const sLogik = getActiveHeadSignal(3);
-    const sStruktur = getActiveHeadSignal(4);
+    // 2. Nutze das Profil-Mapping aus Phase 3 (dort liegen die target_tokens)
+    const profiles = scenario.phase_3_ffn?.activation_profiles || [];
+    const currentProfile = profiles.find(p =>
+      String(p.ref_profile_id).trim() === String(activeProfileId).trim()
+    ) || profiles[0];
+
     const T = Math.max(0.01, parseFloat(temperature) || 0.7);
 
-    const calculated = finalOutputs.map(item => {
-      const ffnCat = activeFFN?.find(f => f.label === item.type);
-      const baseActivation = ffnCat ? ffnCat.activation : 0.5;
-      const typeLabel = (item.type || "").toLowerCase();
-      let factor = 1.0;
-      let actingHead = "Neutral / Bias";
+    const results = finalOutputs.map(item => {
+      // 3. Generisches Mapping über target_tokens aus dem Szenario-JSON
+      const ffnCatDefinition = activeFFN?.find(f => {
+        const meta = currentProfile?.activations?.find(a =>
+          String(a.label).toLowerCase().trim() === String(f.label).toLowerCase().trim()
+        );
+        return meta?.target_tokens?.some(t =>
+          String(t).toLowerCase().trim() === String(item.label).toLowerCase().trim()
+        );
+      });
 
-      if (typeLabel.includes("geographie") || typeLabel.includes("fakten") || typeLabel.includes("funktional")) {
-        factor = sLogik; actingHead = "Head 3 (Logik)";
-      } else if (typeLabel.includes("nonsense") || typeLabel.includes("zufall")) {
-        factor = Math.max(0.7, sStruktur); actingHead = "Head 4 (Struktur)";
-      } else if (typeLabel.includes("wissenschaft")) {
-        factor = (sSemantik + sSyntax) / 2; actingHead = "Head 1+2 (Akademisch)";
-      } else if (typeLabel.includes("poetisch")) {
-        factor = sSemantik; actingHead = "Head 1 (Semantik)";
-      }
+      // --- LIVE-ABGLEICH MIT DEM SIMULATOR-STATE ---
+      // Wir suchen die AKTUELLEN Werte im Simulator, falls ffnCatDefinition gefunden wurde
+      const liveFFNData = simulator?.activeFFN?.find(f =>
+        String(f.label).toLowerCase().trim() === String(ffnCatDefinition?.label).toLowerCase().trim()
+      );
 
-      const liveActivation = Math.max(0, Math.min(1.0, baseActivation * factor));
-      const ffnBias = (liveActivation - 0.5) * 12;
-      const jitter = (Math.random() - 0.5) * (noise || 0) * 2.0;
+      // Falls wir Live-Daten haben, nutzen wir diese, sonst Fallback auf Definition oder 0.5
+      const liveActivation = liveFFNData ? liveFFNData.activation : (ffnCatDefinition ? ffnCatDefinition.activation : 0.5);
+
+      // 4. Berechnung des Bias (Hebel 24 für SCHLOSS-02)
+      const ffnBias = (liveActivation - 0.5) * 24;
       const baseLogit = item.logit !== undefined ? item.logit : 5.0;
+
+      // Noise/Entropy-Einfluss
+      const jitter = (Math.random() - 0.5) * (noise || 0) * 2.0;
       const effectiveLogit = baseLogit + ffnBias + jitter;
 
+      // Debug-Log zur Überprüfung der mathematischen Kette
+      if (ffnCatDefinition && (item.label === "Prachtbau" || item.label === "Türschloss")) {
+        console.log(`🧪 BIAS-CHECK [${item.label}]: Act=${liveActivation.toFixed(3)} | Bias=${ffnBias.toFixed(2)}`);
+      }
+
       return {
-        ...item, effectiveLogit, liveActivation, actingHead, ffnBoost: ffnBias,
+        ...item,
+        effectiveLogit,
+        liveActivation,
+        actingHead: ffnCatDefinition ? `Head ${ffnCatDefinition.linked_head}` : "Default",
+        ffnBoost: ffnBias,
         isBlockedByMLP: liveActivation < mlpThreshold,
         exp: Math.exp(effectiveLogit / T)
       };
     });
 
-    const sum = calculated.reduce((acc, curr) => acc + curr.exp, 0);
-    const probabilities = calculated.map(item => ({ ...item, dynamicProb: sum > 0 ? item.exp / sum : 0 }));
-    return [...probabilities].sort((a, b) => b.dynamicProb - a.dynamicProb);
-  }, [finalOutputs, temperature, mlpThreshold, activeFFN, noise, headOverrides, activeProfileId, sourceTokenId, activeAttention]);
+    const sumExp = results.reduce((acc, curr) => acc + curr.exp, 0);
+    return results.map(item => ({
+      ...item,
+      dynamicProb: sumExp > 0 ? item.exp / sumExp : 0
+    })).sort((a, b) => b.dynamicProb - a.dynamicProb);
+
+  }, [
+    finalOutputs,
+    activeFFN,
+    simulator?.activeFFN, // Wichtig: React muss auf Änderungen im Simulator-FFN reagieren
+    activeScenario,
+    simulator?.activeScenario,
+    activeProfileId,
+    temperature,
+    noise,
+    mlpThreshold,
+    JSON.stringify(headOverrides)
+  ]);
+
+  // Effekt zur Synchronisierung des States
+  useEffect(() => {
+    const results = calculateLogic();
+    if (results) {
+      setSimulationState(prev => ({
+        outputs: results.slice(0, 10),
+        winner: (prev.winner && results.find(r => r.label === prev.winner.label)) || results[0]
+      }));
+    }
+  }, [calculateLogic, JSON.stringify(headOverrides), activeFFN]);
+
+  // DER TRIGGER-EFFECT (Prüfe ob dieser exakt so aussieht!)
+  useEffect(() => {
+    console.log("🔄 [DECODER] Effect Sync...");
+    const results = calculateLogic();
+    if (results) {
+      setSimulationState(prev => ({
+        outputs: results.slice(0, 10),
+        winner: (prev.winner && results.find(r => r.label === prev.winner.label)) || results[0]
+      }));
+    }
+  }, [calculateLogic, headOverrides, activeFFN]); // Diese drei müssen das Update treiben
 
   const getInspectorData = useCallback((out, index) => {
     if (!out) return null;
@@ -116,6 +160,28 @@ const Phase4_Decoding = ({ simulator, setHoveredItem, theme, activeScenario }) =
     if (selectedLabel) updateInspector(selectedLabel);
   }, [headOverrides, mlpThreshold, noise, temperature, selectedLabel, updateInspector]);
 
+  // Ersetze den bestehenden useEffect für die initialen Ergebnisse durch diesen:
+  useEffect(() => {
+    if (!isShuffling) {
+      const results = calculateLogic();
+      if (results) {
+        setSimulationState(prev => {
+          // Wir suchen den aktuellen Gewinner in den neuen Ergebnissen
+          const newWinner = prev.winner
+            ? results.find(r => r.label === prev.winner.label)
+            : results[0];
+
+          return {
+            outputs: results.slice(0, 10),
+            // Falls der alte Gewinner jetzt blockiert ist, nimm den neuen Spitzenreiter
+            winner: (newWinner && !newWinner.isBlockedByMLP) ? newWinner : results[0]
+          };
+        });
+      }
+    }
+    // WICHTIG: headOverrides muss hier als Dependency stehen!
+  }, [calculateLogic, activeScenario?.id, activeProfileId, sourceTokenId, isShuffling, headOverrides]);
+
   // Fix 2: Resampling-Logik mit State-Lock
   const triggerResample = () => {
     setIsShuffling(true);
@@ -124,19 +190,19 @@ const Phase4_Decoding = ({ simulator, setHoveredItem, theme, activeScenario }) =
       if (results) {
         // Filtere Kandidaten, die überhaupt gewürfelt werden können
         const candidates = results.filter((out, i) => i < topK && !out.isBlockedByMLP && out.dynamicProb > 0.001);
-        
-        let win = results[0]; 
+
+        let win = results[0];
         const r = Math.random();
         let cum = 0;
         for (let o of results) {
           cum += o.dynamicProb;
           if (r <= cum) { win = o; break; }
         }
-        
+
         setSimulationState({ outputs: results.slice(0, 10), winner: win });
         if (setSelectedToken) setSelectedToken(win);
         // Wir markieren den neuen Gewinner auch im Inspektor
-        setSelectedLabel(win.label); 
+        setSelectedLabel(win.label);
       }
       setIsShuffling(false);
     }, 450);
@@ -148,9 +214,9 @@ const Phase4_Decoding = ({ simulator, setHoveredItem, theme, activeScenario }) =
       if (results) {
         // Wir überschreiben den winner NUR, wenn noch kein winner durch triggerResample gesetzt wurde
         // oder wenn sich das Szenario/Token ändert.
-        setSimulationState(prev => ({ 
-          outputs: results.slice(0, 10), 
-          winner: prev.winner && results.find(r => r.label === prev.winner.label) ? results.find(r => r.label === prev.winner.label) : results[0] 
+        setSimulationState(prev => ({
+          outputs: results.slice(0, 10),
+          winner: prev.winner && results.find(r => r.label === prev.winner.label) ? results.find(r => r.label === prev.winner.label) : results[0]
         }));
       }
     }
@@ -213,9 +279,9 @@ const Phase4_Decoding = ({ simulator, setHoveredItem, theme, activeScenario }) =
                       {isShuffling ? (Math.random() * 100).toFixed(0) : (out.dynamicProb * 100).toFixed(0)}%
                     </span>
                     <div className={`w-full max-w-[40px] rounded-t-lg transition-all duration-300 ${isWinner && !isShuffling ? 'ring-2 ring-blue-500 shadow-lg' : ''} ${isShuffling ? 'animate-pulse opacity-50' : ''}`}
-                      style={{ 
-                        height: isShuffling ? `${Math.random() * 85}%` : `${out.dynamicProb * 85}%`, 
-                        backgroundColor: (isActive || isWinner) ? color : (theme === 'light' ? '#cbd5e1' : '#334155') 
+                      style={{
+                        height: isShuffling ? `${Math.random() * 85}%` : `${out.dynamicProb * 85}%`,
+                        backgroundColor: (isActive || isWinner) ? color : (theme === 'light' ? '#cbd5e1' : '#334155')
                       }}
                     />
                     <div className="absolute top-full pt-2 w-full text-center">

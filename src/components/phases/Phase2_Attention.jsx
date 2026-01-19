@@ -33,7 +33,6 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
   const PERSIST_HEAD_KEY = activeScenario ? `sim_lastHead_${activeScenario.id}` : null;
   const PERSIST_TOKEN_KEY = activeScenario ? `sim_lastToken_${activeScenario.id}` : null;
 
-  // --- PERSISTENZ-LOGIK FÜR HEAD & TOKEN ---
   const [selectedTokenId, setSelectedTokenId] = useState(() => {
     try {
       const saved = PERSIST_TOKEN_KEY ? sessionStorage.getItem(PERSIST_TOKEN_KEY) : null;
@@ -74,7 +73,6 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
     } catch (e) { }
   }, [SESSION_STORAGE_KEY, setHeadOverrides]);
 
-  // --- FIX: Szenario-Reset-Logik mit Persistenz-Check ---
   const lastScenarioId = useRef(null);
 
   useEffect(() => {
@@ -90,7 +88,6 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
     if (setMlpThreshold) setMlpThreshold(0.2);
     if (setHeadOverrides) setHeadOverrides({});
 
-    // Beim Szenario-Wechsel prüfen wir, ob für dieses neue Szenario schon was im Speicher war
     const savedToken = PERSIST_TOKEN_KEY ? sessionStorage.getItem(PERSIST_TOKEN_KEY) : null;
     const defaultTokenId = savedToken || activeScenario.phase_0_tokenization?.tokens[activeScenario.phase_0_tokenization?.tokens.length - 2]?.id || activeScenario.phase_0_tokenization?.tokens[0]?.id;
     
@@ -286,17 +283,23 @@ const Phase2_Attention = ({ simulator, setHoveredItem, theme }) => {
           <div className="grid grid-cols-2 gap-2">
             {[1, 2, 3, 4].map(h => {
               const activeCount = getHeadActiveCount(h);
+              const currentVal = headOverrides[`${activeProfileId}_s${currentSourceTokenId}_h${h}`] ?? 0.7;
               return (
                 <div key={h} onClick={() => handleHeadChange(h)} className={`p-3 rounded-2xl border-2 transition-all cursor-pointer ${activeHead === h ? 'bg-blue-600 border-blue-400 text-white shadow-lg' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700'}`}>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-black uppercase">{headDefinitions[h].label}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase">{headDefinitions[h].label}</span>
+                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${activeHead === h ? 'bg-white/20 text-white' : 'bg-black/20 text-slate-400'}`}>
+                        {currentVal.toFixed(2)}
+                      </span>
+                    </div>
                     {activeCount > 0 && (
                       <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black ${activeHead === h ? 'bg-white text-blue-600' : 'bg-blue-500 text-white'}`}>
                         {activeCount}
                       </div>
                     )}
                   </div>
-                  <input type="range" min="0" max="1" step="0.05" value={headOverrides[`${activeProfileId}_s${currentSourceTokenId}_h${h}`] ?? 0.7}
+                  <input type="range" min="0" max="1" step="0.05" value={currentVal}
                     onClick={e => e.stopPropagation()} onInput={e => handleSliderChange(h, e.target.value)}
                     className="w-full h-1.5 bg-white/20 rounded-lg appearance-none accent-white cursor-ew-resize" />
                 </div>
