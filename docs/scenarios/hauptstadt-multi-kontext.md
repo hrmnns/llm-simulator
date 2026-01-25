@@ -10,8 +10,6 @@
 2. **Zeitliche Dimensionierung:** Lernen, wie das Modell durch spezifische Heads zwischen aktuellem "Weltwissen" (Berlin) und historischem "Archiv-Wissen" (Bonn) unterscheidet.
 3. **Logit-Manipulation:** Nachvollziehen, wie die Aktivierung einer abstrakten Kategorie im Feed-Forward-Network (FFN) die Wahrscheinlichkeitsverteilung des nächsten Tokens mathematisch determiniert.
 
-
-
 ## 2. Technische Logik: Die Kausalitäts-Brücke
 
 ### Phase 1 (Embedding): Die Vektorraum-Kartierung
@@ -21,14 +19,18 @@ Die Tokens werden in einem 2D-Koordinatensystem verortet, um ihre semantische Na
 * **X-Achse (Inhalt vs. Funktion):** Trennt harte Fakten wie "Deutschland" und "Hauptstadt" (rechts, positiv) von funktionalen Syntax-Elementen wie "ist" und "von" (links, negativ).
 * **Y-Achse (Autonomie vs. Abhängigkeit):** Unterscheidet zwischen Tokens, die Kontext suchen (z.B. der Artikel "Die", positiv), und solchen, die eine hohe semantische Dichte besitzen (z.B. "Deutschland", negativ).
 
-### Phase 2 (Attention): Der Routing-Mechanismus
+### Phase 2 (Attention): Der Routing-Mechanismus (Token-Gating)
 
-Hier entscheiden die Attention-Heads, welche Informationen verknüpft werden:
+Hier entscheiden die Attention-Heads, welche Informationen verknüpft werden. Die Funktion eines Heads ist dabei strikt an das **Source-Token** (den Auslöser) gebunden:
 
-* **Head 3 (Geografie):** Verbindet "Deutschland" (Source) mit "Hauptstadt" (Target), um die aktuelle politische Definition abzurufen.
-* **Head 4 (Geschichte):** Der Artikel "Die" (Source) blickt auf "Deutschland" (Target), um den historischen Kontext (Zeitachse) zu aktivieren.
-* **Head 2 (Emotion):** Verknüpft das Konzept "Hauptstadt" (Source) mit dem Kopula-Verb "ist" (Target), um eine qualitative Bewertung vorzubereiten.
-* **Head 1 (Sensorik & Distanz):** Scannt die Umgebung (von "ist" oder "von" ausgehend) nach physikalischen Attributen (Lärm) oder räumlicher Entfernung.
+* **Head 3 (Geografie) [Trigger: "Deutschland"]:** Verbindet die Entität (Source 3) mit dem Konzept "Hauptstadt" (Target 1), um die aktuelle, faktische Definition abzurufen.
+* **Head 4 (Geschichte) [Trigger: "Die"]:** Der Artikel (Source 0) blickt zurück auf "Deutschland" (Target 3) und aktiviert dadurch den historischen Archiv-Modus (Zeitachse).
+* **Head 2 (Emotion) [Trigger: "Hauptstadt"]:** Das Nomen (Source 1) sucht nach einer qualitativen Bewertung im Kopula-Verb "ist" (Target 4).
+* **Head 1 (Polysemie & Kontext):** Dieser Head ändert seine Funktion je nach Trigger-Wort:
+* **Trigger "ist" (Source 4) → Sensorik:** Er sucht nach physischen Umgebungseindrücken (Lärm/Hektik) in Relation zur Präposition (Target 2).
+* **Trigger "von" (Source 2) → Distanz:** Er interpretiert die Präposition als räumlichen Vektor zur Entität "Deutschland" (Target 3) und berechnet die Entfernung.
+
+
 
 ### Phase 3 (FFN): Die Kategorie-Aktivierung
 
@@ -299,12 +301,13 @@ Die physische Wahrscheinlichkeit des nächsten Wortes wird durch den Bias berech
 
 ## 4. Testplan: Szenarien & Experimente
 
-### ### Testfall 1: Das Resultat "Berlin" (Der Fakten-Check)
+### Testfall 1: Das Resultat "Berlin" (Der Fakten-Check)
 
 * **Ziel:** Die KI soll logisch/geografisch antworten.
 * **Mechanik:** Aktivierung der Kategorie geografie über Head 3.
 * **Trigger-Token:** "Deutschland" (ID: 3)
-* **Aktion:**
+
+**Aktion:**
 1. Fokussiere/Klicke auf das Token "Deutschland".
 2. Setze Head 3 auf Maximum (1.0).
 3. Setze alle anderen Heads auf diesem Token auf Minimum (0.0).
@@ -316,68 +319,70 @@ Die physische Wahrscheinlichkeit des nächsten Wortes wird durch den Bias berech
 
 
 
-### ### Testfall 2: Das Resultat "Bonn" (Der Historiker)
+### Testfall 2: Das Resultat "Bonn" (Der Historiker)
 
 * **Ziel:** Die KI soll in die Vergangenheit blicken (Bonner Republik).
 * **Mechanik:** Aktivierung der Kategorie geschichte über Head 4.
 * **Trigger-Token:** "Die" (ID: 0)
-* **Aktion:**
+
+**Aktion:**
 1. Fokussiere/Klicke auf das Token "Die".
 2. Setze Head 4 auf Maximum (1.0).
 3. **Wichtig:** Stelle sicher, dass Head 3 bei "Deutschland" (aus Test 1) wieder neutral oder niedrig ist, sonst gewinnt Berlin wegen des höheren Base-Logits.
 
 
-* **Erwartetes Verhalten:**
+**Erwartetes Verhalten:**
 * Phase 3: Kategorie "Archiv-Wissen" wird grün.
 * Phase 4: "Bonn" überholt Berlin.
 
 
 
-### ### Testfall 3: Das Resultat "schön" (Der Ästhet)
+### Testfall 3: Das Resultat "schön" (Der Ästhet)
 
 * **Ziel:** Die KI soll das Wort "Hauptstadt" emotional bewerten.
 * **Mechanik:** Aktivierung der Kategorie emotion über Head 2.
 * **Trigger-Token:** "Hauptstadt" (ID: 1)
-* **Aktion:**
+
+**Aktion:**
 1. Fokussiere/Klicke auf das Token "Hauptstadt".
 2. Setze Head 2 auf Maximum (1.0).
 
 
-* **Erwartetes Verhalten:**
+**Erwartetes Verhalten:**
 * Phase 3: Kategorie "Affektive Ebene" wird grün.
 * Phase 4: Das Adjektiv "schön" gewinnt.
 
 
 
-### ### Testfall 4: Das Resultat "laut" (Der Sensoriker)
+### Testfall 4: Das Resultat "laut" (Der Sensoriker)
 
 * **Ziel:** Die KI soll auf das "ist" (Zustand/Gegenwart) reagieren und Lärm assoziieren. (Dies ist der erste Test für Head 1).
 * **Mechanik:** Aktivierung der Kategorie sensorik über Head 1.
 * **Trigger-Token:** "ist" (ID: 4)
-* **Aktion:**
+
+**Aktion:**
 1. Fokussiere/Klicke auf das Token "ist".
 2. Setze Head 1 auf Maximum (1.0).
 
-
-* **Erwartetes Verhalten:**
+**Erwartetes Verhalten:**
 * Phase 3: Kategorie "Umgebung/Lärm" wird grün.
 * Phase 4: "laut" gewinnt.
 * **Check:** Die Kategorie "Geografische Distanz" (auch Head 1) darf nicht angehen, da wir auf Token "ist" sind, nicht auf "von".
 
 
 
-### ### Testfall 5: Das Resultat "weit weg" (Der Distanz-Messer)
+### Testfall 5: Das Resultat "weit weg" (Der Distanz-Messer)
 
 * **Ziel:** Die KI soll die Präposition "von" als räumliche Trennung interpretieren. (Dies ist der zweite Test für Head 1).
 * **Mechanik:** Aktivierung der Kategorie distanz über Head 1.
 * **Trigger-Token:** "von" (ID: 2)
-* **Aktion:**
+
+**Aktion:**
 1. Fokussiere/Klicke auf das Token "von".
 2. Setze Head 1 auf Maximum (1.0).
 3. Stelle sicher, dass Head 1 beim Token "ist" (aus Test 4) wieder auf 0.0 oder 0.7 steht.
 
-
-* **Erwartetes Verhalten:**
+**Erwartetes Verhalten:**
 * Phase 3: Kategorie "Geografische Distanz" wird grün.
 * Phase 4: "weit weg" gewinnt.
 
