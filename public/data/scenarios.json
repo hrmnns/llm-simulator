@@ -248,7 +248,7 @@
       }
     },
     {
-      "id": "bankraeuber-polysemie-komplett-2026",
+      "id": "bankraeuber-polysemie-v01",
       "name": "Die dreifache Bank: Kontext-Analyse",
       "input_prompt": "Der Bankräuber sitzt auf einer Bank vor der Bank.",
       "explanation": "Dieses Szenario demonstriert die Auflösung extremer Polysemie. Drei identische Token 'Bank' werden durch Positional Encoding unterscheidbar gemacht und durch Attention in völlig unterschiedliche semantische Bereiche verschoben.",
