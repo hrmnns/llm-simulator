@@ -248,7 +248,7 @@
       }
     },
     {
-      "id": "bankraeuber-polysemie-komplett-2026",
+      "id": "bankraeuber-polysemie-v01",
       "name": "Die dreifache Bank: Kontext-Analyse",
       "input_prompt": "Der Bankräuber sitzt auf einer Bank vor der Bank.",
       "explanation": "Dieses Szenario demonstriert die Auflösung extremer Polysemie. Drei identische Token 'Bank' werden durch Positional Encoding unterscheidbar gemacht und durch Attention in völlig unterschiedliche semantische Bereiche verschoben.",
@@ -478,24 +478,51 @@
             "rules": [
               {
                 "head": 1,
-                "label": "finance_crime",
-                "source": "2",
-                "target": "1",
-                "strength": 2.0
+                "label": "finance_crime_context",
+                "source": 2,
+                "target": 1,
+                "strength": 2.0,
+                "explanation": "Räuber beeinflusst Bank (1)"
+              },
+              {
+                "head": 1,
+                "label": "finance_readout",
+                "source": 10,
+                "target": 1,
+                "strength": 2.0,
+                "explanation": "Punkt (10) schaut zurück auf Bank (1)"
               },
               {
                 "head": 2,
-                "label": "outdoor_furniture",
-                "source": "4",
-                "target": "6",
-                "strength": 1.8
+                "label": "furniture_context",
+                "source": 4,
+                "target": 6,
+                "strength": 1.8,
+                "explanation": "auf beeinflusst Bank (6)"
+              },
+              {
+                "head": 2,
+                "label": "furniture_readout",
+                "source": 10,
+                "target": 6,
+                "strength": 1.8,
+                "explanation": "Punkt (10) schaut zurück auf Bank (6)"
               },
               {
                 "head": 3,
-                "label": "architecture",
-                "source": "7",
-                "target": "9",
-                "strength": 1.5
+                "label": "architecture_context",
+                "source": 7,
+                "target": 9,
+                "strength": 1.5,
+                "explanation": "vor beeinflusst Bank (9)"
+              },
+              {
+                "head": 3,
+                "label": "architecture_readout",
+                "source": 10,
+                "target": 9,
+                "strength": 1.5,
+                "explanation": "Punkt (10) schaut zurück auf Bank (9)"
               }
             ]
           }
