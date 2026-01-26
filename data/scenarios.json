@@ -482,15 +482,23 @@
                 "source": 2,
                 "target": 1,
                 "strength": 2.0,
-                "explanation": "Räuber beeinflusst Bank (1)"
+                "explanation": "Kontextualisierung: Räuber -> Bank"
               },
               {
                 "head": 1,
-                "label": "finance_readout",
+                "label": "finance_readout_visual",
                 "source": 10,
                 "target": 1,
                 "strength": 2.0,
-                "explanation": "Punkt (10) schaut zurück auf Bank (1)"
+                "explanation": "VISUELL: Pfeil vom Punkt zurück zur Bank"
+              },
+              {
+                "head": 1,
+                "label": "finance_readout_logic",
+                "source": 1,
+                "target": 10,
+                "strength": 2.0,
+                "explanation": "LOGIK: Info fließt von Bank zum Punkt (aktiviert Phase 3)"
               },
               {
                 "head": 2,
@@ -498,15 +506,23 @@
                 "source": 4,
                 "target": 6,
                 "strength": 1.8,
-                "explanation": "auf beeinflusst Bank (6)"
+                "explanation": "Kontextualisierung: auf -> Bank"
               },
               {
                 "head": 2,
-                "label": "furniture_readout",
+                "label": "furniture_readout_visual",
                 "source": 10,
                 "target": 6,
                 "strength": 1.8,
-                "explanation": "Punkt (10) schaut zurück auf Bank (6)"
+                "explanation": "VISUELL: Pfeil vom Punkt zurück zur Bank"
+              },
+              {
+                "head": 2,
+                "label": "furniture_readout_logic",
+                "source": 6,
+                "target": 10,
+                "strength": 1.8,
+                "explanation": "LOGIK: Info fließt von Bank zum Punkt (aktiviert Phase 3)"
               },
               {
                 "head": 3,
@@ -514,15 +530,23 @@
                 "source": 7,
                 "target": 9,
                 "strength": 1.5,
-                "explanation": "vor beeinflusst Bank (9)"
+                "explanation": "Kontextualisierung: vor -> Bank"
               },
               {
                 "head": 3,
-                "label": "architecture_readout",
+                "label": "architecture_readout_visual",
                 "source": 10,
                 "target": 9,
                 "strength": 1.5,
-                "explanation": "Punkt (10) schaut zurück auf Bank (9)"
+                "explanation": "VISUELL: Pfeil vom Punkt zurück zur Bank"
+              },
+              {
+                "head": 3,
+                "label": "architecture_readout_logic",
+                "source": 9,
+                "target": 10,
+                "strength": 1.5,
+                "explanation": "LOGIK: Info fließt von Bank zum Punkt (aktiviert Phase 3)"
               }
             ]
           }
@@ -536,7 +560,7 @@
             "linked_head": 1,
             "color": "#dc2626",
             "icon": "💸",
-            "explanation": "Diese Wissens-Kategorie wird aktiviert, wenn das Token 'Bank' semantisch mit einem Täter-Token wie 'Räuber' verschmilzt. Die neuronale Analyse erkennt hier keine Sitzgelegenheit, sondern ein Zielobjekt für eine kriminelle Handlung innerhalb des Wirtschaftssystems."
+            "explanation": "Diese Wissens-Kategorie wird aktiviert, wenn Head 1 dominant ist. Da der Punkt (.) auf 'Bank (1)' zurückschaut, extrahiert das FFN hieraus die Semantik von 'Geldinstitut' und 'Überfall' und stellt sie für die Vorhersage bereit."
           },
           {
             "id": "outdoor_furniture",
@@ -544,7 +568,7 @@
             "linked_head": 2,
             "color": "#16a34a",
             "icon": "🌳",
-            "explanation": "Die Kombination aus der Präposition 'auf' und dem Verb 'sitzen' triggert dieses Wissens-Cluster. Es repräsentiert das Konzept von hölzernen oder metallischen Sitzgelegenheiten im öffentlichen Raum. Die abstrakte Bank-Bedeutung wird hier fast vollständig unterdrückt."
+            "explanation": "Die Kombination aus der Präposition 'auf' und dem Verb 'sitzen' triggert dieses Wissens-Cluster via Head 2. Durch den Readout von Token 10 auf 'Bank (6)' wird das Konzept der Ruhe und Entspannung aktiviert, sofern Head 2 stark genug gewichtet ist."
           },
           {
             "id": "architecture",
@@ -552,7 +576,7 @@
             "linked_head": 3,
             "color": "#2563eb",
             "icon": "🏛️",
-            "explanation": "Dieses Cluster reagiert auf räumliche Lagebeschreibungen von großen Objekten. Wenn etwas 'vor' einer Bank geschieht, identifiziert das MLP-Layer das Gebäude als architektonischen Fixpunkt. Es aktiviert Wissen über Fassaden, Institutionen und Stadtplanung."
+            "explanation": "Dieses Cluster reagiert auf die räumliche Verortung (Head 3). Wenn der Fokus des Satzendes auf 'Bank (9)' liegt, identifiziert das MLP-Layer dies als Gebäude. Es aktiviert Wissen über Fassaden und Stadtplanung, was zu einer neutralen Ortsbeschreibung führt."
           }
         ]
       },
@@ -561,12 +585,12 @@
           "default_temperature": 0.6,
           "default_noise": 0.0,
           "default_mlp_threshold": 0.5,
-          "logit_bias_multiplier": 20
+          "logit_bias_multiplier": 25
         },
         "top_k_tokens": [
           {
             "token": "und plant die Flucht.",
-            "base_logit": 5.9,
+            "base_logit": 5.6,
             "category_link": "finance_crime"
           },
           {
